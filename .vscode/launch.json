@@ -1,0 +1,20 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Debug main.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "cwd":"${workspaceFolder}",
+            // "args": ["fit","-c","configs/dinov3/coco/instance/eomt_large_640.yaml","--trainer.devices","1","--data.batch_size","1","--trainer.num_sanity_val_steps","0","--data.path","/workspace/data/Datasets/DV3_same_t_and_v/"],
+            "args": ["validate", "-c", "configs/dinov3/coco/instance/eomt_large_640.yaml", "--ckpt_path", "/workspace/data/EOMT/Checkpoints/epoch=026-mAP=0.81.ckpt", "--data.path", "/workspace/data/Datasets/SCD_for_EoMT/", "--data.batch_size", "1"],
+            "env": {"PYTHONPATH": "${workspaceFolder}"}
+        }
+    ]
+}
