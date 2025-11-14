@@ -14,7 +14,7 @@ import logging
 import torch
 import warnings
 from lightning.pytorch import cli
-from lightning.pytorch.callbacks import ModelSummary, LearningRateMonitor
+from lightning.pytorch.callbacks import ModelSummary, LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loops.training_epoch_loop import _TrainingEpochLoop
 from lightning.pytorch.loops.fetchers import _DataFetcher, _DataLoaderIterDataFetcher
 
@@ -157,6 +157,15 @@ class LightningCLI(cli.LightningCLI):
         self.trainer.fit(model, **kwargs)
 
 
+# Saves top-K checkpoints based on "val_loss" metric
+save_checkpoints_callback = ModelCheckpoint(
+    save_top_k=3,
+    monitor="mAP",
+    mode="max",
+    dirpath="checkpoints/",
+    filename="{epoch:03d}-{mAP:.2f}",
+    )
+
 def cli_main():
     LightningCLI(
         LightningModule,
@@ -171,6 +180,7 @@ def cli_main():
             "callbacks": [
                 ModelSummary(max_depth=3),
                 LearningRateMonitor(logging_interval="epoch"),
+                save_checkpoints_callback,
             ],
             "devices": 1,
             "gradient_clip_val": 0.01,
