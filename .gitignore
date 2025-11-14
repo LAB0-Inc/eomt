@@ -178,3 +178,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Local ignored files
+/output
+/trt
+/checkpoints
