@@ -230,6 +230,11 @@ class LightningModule(lightning.LightningModule):
                     on_step=True,
                 )
 
+    def on_train_epoch_end(self):
+        '''Free memory before the validation starts'''
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+
     def init_metrics_semantic(self, ignore_idx, num_blocks):
         self.metrics = nn.ModuleList(
             [
@@ -417,6 +422,11 @@ class LightningModule(lightning.LightningModule):
             metric.reset()
 
             block_postfix = self.block_postfix(i)
+            # I use this to create the name of the checkpoint file.
+            self.log(
+                f"mAP",
+                results["map"],
+            )
             self.log(
                 f"metrics/{log_prefix}_ap_all{block_postfix}",
                 results["map"],
@@ -441,6 +451,10 @@ class LightningModule(lightning.LightningModule):
                 f"metrics/{log_prefix}_ap_75_all{block_postfix}",
                 results["map_75"],
             )
+        del results
+
+        # Clear GPU cache
+        torch.cuda.empty_cache()
 
     def _on_eval_epoch_end_panoptic(self, log_prefix, log_per_class=False):
         for i, metric in enumerate(self.metrics):  # type: ignore
@@ -879,7 +893,7 @@ class LightningModule(lightning.LightningModule):
         return summed
 
     def _load_ckpt(self, ckpt_path, load_ckpt_class_head):
-        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=True)
+        ckpt = torch.load(ckpt_path, map_location=self.device, weights_only=True)
         if "state_dict" in ckpt:
             ckpt = ckpt["state_dict"]
         ckpt = {k: v for k, v in ckpt.items() if "criterion.empty_weight" not in k}
