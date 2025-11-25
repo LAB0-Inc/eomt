@@ -15,6 +15,76 @@ import torch.nn.functional as F
 from training.mask_classification_loss import MaskClassificationLoss
 from training.lightning_module import LightningModule
 
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+import csv
+from torchmetrics import JaccardIndex
+
+import gc
+import sys
+
+
+def get_size(obj, seen=None):
+    """Calculate size including torch tensors"""
+    if seen is None:
+        seen = set()
+
+    obj_id = id(obj)
+    if obj_id in seen:
+        return 0
+    seen.add(obj_id)
+
+    # Handle torch tensors
+    if torch.is_tensor(obj):
+        return obj.nbytes
+
+    size = sys.getsizeof(obj)
+
+    if isinstance(obj, dict):
+        size += sum([get_size(v, seen) for v in obj.values()])
+        size += sum([get_size(k, seen) for k in obj.keys()])
+    elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
+        size += sum([get_size(i, seen) for i in obj])
+
+    return size
+
+def upsample(masks, target_side=800):
+    in_w = masks.shape[-1]
+    in_l = masks.shape[-2]
+    min_side = min(in_w, in_l)
+    scale_factor = target_side / min_side
+    target_size = (int(in_l * scale_factor), int(in_w * scale_factor))
+    upsampled = F.interpolate(masks.float().unsqueeze(1), size=target_size, mode='nearest').squeeze(1).bool()
+    return upsampled
+
+
+def generate_bgr_colors(n):
+    """
+    Generate n fully saturated, equally spaced colors along the hue circle in BGR.
+
+    Args:
+        n (int): Number of colors.
+
+    Returns:
+        List of n colors in BGR format (values 0-255).
+    """
+    # Equally spaced hues [0, 180) for OpenCV's HSV (H ranges 0-179)
+    hues = np.linspace(0, 179, n, endpoint=False).astype(int)
+
+    # Full saturation and value
+    s = np.full_like(hues, 255)
+    v = np.full_like(hues, 255)
+
+    # Stack into HSV array
+    hsv_colors = np.stack([hues, s, v], axis=1).astype(np.uint8)
+
+    # Convert to BGR using OpenCV
+    bgr_colors = cv2.cvtColor(hsv_colors[np.newaxis, :, :], cv2.COLOR_HSV2BGR)[0]
+
+    # Return as a list of tuples
+    return [tuple(int(c) for c in color) for color in bgr_colors]
+
 
 class MaskClassificationInstance(LightningModule):
     def __init__(
@@ -91,6 +161,9 @@ class MaskClassificationInstance(LightningModule):
         batch_idx=None,
         log_prefix=None,
     ):
+        root_output_folder = '/workspace/data/EOMT/Output/'
+        output_folder = root_output_folder + 'val_run2_attn_off_rescaled_val_images'
+
         imgs, targets = batch
 
         img_sizes = [img.shape[-2:] for img in imgs]
@@ -144,7 +217,123 @@ class MaskClassificationInstance(LightningModule):
                     )
                 )
 
-            self.update_metrics_instance(preds, targets, i)
+            # Upsample the masks. We believe this forces the code that computes the metrics to encode the masks efficiently.
+            preds[0]['masks'] = upsample(preds[0]['masks'])
+            targets_[0]['masks'] = upsample(targets_[0]['masks'])
+            self.update_metrics_instance(preds, targets_, i)  # The original code did not have the underscore, but it seems that COCO uses the "iscrowd" version of the filed.
+
+        # Enable this line if you want to save visualizations.
+        save_visualizations = False  # MAKE SURE YOU SET THE OUTPUT FOLDER CORRECTLY, WHEN YOU ENABLE THIS.
+        if save_visualizations:
+            self.visualize_instance_segmentation(preds[0],
+                                                 imgs[0],
+                                                 batch_idx,
+                                                 targets[0],
+                                                 output_folder=output_folder,  # MAKE SURE YOU SET THIS CORRECTLY.
+                                                 score_thresh=0.8)
+
+        del imgs, targets, transformed_imgs, mask_logits_per_layer, class_logits_per_layer, mask_logits, preds, targets_, scores, labels, topk_indices, topk_scores, masks, mask_scores
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    def visualize_instance_segmentation(self, preds, image, batch_idx, targets, output_folder, score_thresh=0.8):
+        '''Todo: Add docstring.'''
+        with torch.no_grad():
+            metric = JaccardIndex(task='binary')
+
+            #################################################
+            # COMPUTE THE COLOR IMAGE WITH SEGMENT OVERLAYS #
+            #################################################
+            masks = preds["masks"].squeeze(1)  # shape [N, H, W]
+            labels = preds["labels"]
+            scores = preds["scores"]
+
+            # Filter by confidence threshold
+            keep = scores > score_thresh
+            masks, labels, scores = masks[keep], labels[keep], scores[keep]
+
+            # Create a color visualization
+            if isinstance(image, torch.Tensor):
+                color_img = image.permute(1, 2, 0).cpu().numpy()
+            else:
+                color_img = np.array(image)
+
+            if len(masks) > 0:
+                n_detections = masks.shape[0]
+                # Create instance map
+                inst_map = torch.zeros_like(masks[0], dtype=torch.int32)
+                for i, mask in enumerate(masks):
+                    inst_map[mask > 0.5] = i + 1  # assign unique ID
+
+                # Generate random colors for instances
+                num_instances = len(masks)
+                colors = list(np.random.permutation(generate_bgr_colors(num_instances)))
+
+
+                # Alpha blending
+                alpha = 0.5  # blending factor, 0.0 = no overlay, 1.0 = full overlay
+
+                combined_det_image = np.zeros(color_img.shape)
+                for i in range(num_instances):
+                    mask = masks[i].cpu().numpy() > 0.5
+                    color = np.array(colors[i])
+                    # Alpha blend only where mask is True
+                    color_img[mask] = (1 - alpha) * color_img[mask] + alpha * color
+                    combined_det_image[mask] = [0.0, 1.0, 0.0]
+            else:
+                combined_det_image = color_img
+                n_detections = 0
+            #################################################
+            # COMPUTE THE GT IMAGE, BLACK WITH BOX SEGMENTS #
+            #################################################
+            gt_image = np.zeros(color_img.shape)
+            gt_masks = targets['masks']
+            if gt_masks.dim() == 3:    # sometimes it's [1, H, W]
+                gt_masks = gt_masks.squeeze(0)
+            gt_masks = gt_masks.cpu().numpy()
+            try:
+                if len(gt_masks.shape) == 2:
+                    n_gt_masks = 1
+                    gt_image[gt_masks] = [0.0, 1.0, 0.0]
+                else:
+                    n_gt_masks = gt_masks.shape[0]
+                    for index, current_mask in enumerate(gt_masks):
+                        gt_image[current_mask] = [0.0, 1.0, 0.0]
+            except Exception:
+                print(f'ERROR: GT image could not be computed for batch {batch_idx}!')
+                gt_image = np.zeros(color_img.shape)
+                n_gt_masks = 0
+
+            fig, axes = plt.subplots(1, 2, figsize=(20, 10))
+            axes[0].imshow(color_img)
+            # axes[0].imshow(combined_det_image)
+            axes[0].set_title("Detections")
+            axes[1].imshow(gt_image)
+            axes[1].set_title("GT")
+
+            if len(masks) > 0:
+                iou = metric(
+                    torch.asarray(combined_det_image[:,:,1]),
+                    torch.asarray(gt_image[:,:,1]))
+            else:
+                iou = torch.tensor(0.0)
+            # print(f'BatchIndex {batch_idx} IoU {iou.item()}')
+
+            with open(f'{output_folder}/iou_log.csv', 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([batch_idx, iou.item(), n_detections, n_gt_masks, n_detections - n_gt_masks])
+            fig.suptitle(f"SemSeg IoU = {iou.item()}", fontsize=24)
+
+            for ax in axes:
+                ax.axis("off")
+            plt.tight_layout()
+            plt.savefig(f"/workspace/data/EOMT/Output/val_run2_attn_off_rescaled_val_images/{batch_idx:04d}.png")
+            plt.close()
+            plt.close(fig)
+            del fig
+            torch.cuda.empty_cache()
+            del masks, labels, scores, gt_masks
+            del color_img, inst_map, combined_det_image, gt_image
 
     def on_validation_epoch_end(self):
         self._on_eval_epoch_end_instance("val")
