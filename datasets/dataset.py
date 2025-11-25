@@ -216,6 +216,7 @@ class Dataset(torch.utils.data.Dataset):
                 "masks": tv_tensors.Mask(torch.stack(masks)),
                 "labels": torch.tensor(labels),
                 "is_crowd": torch.tensor(is_crowd),
+                "image_path": self.imgs[index],  # For debugging purposes.
             }
 
             if self.transforms is not None:
@@ -265,6 +266,7 @@ class Dataset(torch.utils.data.Dataset):
                 "masks": tv_tensors.Mask(torch.stack(masks)),
                 "labels": torch.tensor(labels),
                 "is_crowd": torch.tensor(is_crowd),
+                "image_path": self.imgs[index],  # For debugging purposes.
             }
 
             if self.transforms is not None:

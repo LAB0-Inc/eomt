@@ -42,7 +42,7 @@ It accumulates the gradient of 16 samples before applying Gradient Descent.
 The best three checkpoints are saved for the latest training in `checkpoints`. **Warning, this will overwrite existing checkpoints** so, before starting a new training, you should move old checkpoints in subdirectories like: `checkpoints/Run2`.
 
 # Validation (on the whole validation set)
-The script is `validate_SCD.sh`. TODO: I need to check what it produces in output.
+The script is `validate_SCD.sh`.
 
 # PyTorch inference on one image (or more)
 The original authors provide the `inference.ipynb` notebook. [Not sure if that is currently working]
@@ -52,5 +52,9 @@ The `inference.py` script can run inference on a single image or on the full val
 # Converting to TensorRT
 
 
-
-
+# Files
+| File | Usage |
+|------|-------|
+| configs/dinov3/coco/instance/eomt_large_640.yaml | Defines the training. |
+| training/mask_classification_instance.py | Defines, among other things, eval_step(). At the end of that you can enable saving segm. images. |
+| datasets/coco_instance.py | Contains the hard-coded extension for the input images. |

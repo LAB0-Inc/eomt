@@ -25,30 +25,6 @@ import gc
 import sys
 
 
-def get_size(obj, seen=None):
-    """Calculate size including torch tensors"""
-    if seen is None:
-        seen = set()
-
-    obj_id = id(obj)
-    if obj_id in seen:
-        return 0
-    seen.add(obj_id)
-
-    # Handle torch tensors
-    if torch.is_tensor(obj):
-        return obj.nbytes
-
-    size = sys.getsizeof(obj)
-
-    if isinstance(obj, dict):
-        size += sum([get_size(v, seen) for v in obj.values()])
-        size += sum([get_size(k, seen) for k in obj.keys()])
-    elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
-        size += sum([get_size(i, seen) for i in obj])
-
-    return size
-
 def upsample(masks, target_side=800):
     in_w = masks.shape[-1]
     in_l = masks.shape[-2]
@@ -56,7 +32,12 @@ def upsample(masks, target_side=800):
     scale_factor = target_side / min_side
     target_size = (int(in_l * scale_factor), int(in_w * scale_factor))
     upsampled = F.interpolate(masks.float().unsqueeze(1), size=target_size, mode='nearest').squeeze(1).bool()
-    return upsampled
+    return upsampled, in_w, in_l
+
+def downsample(masks, original_w, original_l):
+    target_size = (original_l, original_w)
+    downsampled = F.interpolate(masks.float().unsqueeze(1), size=target_size, mode='nearest').squeeze(1).bool()
+    return downsampled
 
 
 def generate_bgr_colors(n):
@@ -162,7 +143,7 @@ class MaskClassificationInstance(LightningModule):
         log_prefix=None,
     ):
         root_output_folder = '/workspace/data/EOMT/Output/'
-        output_folder = root_output_folder + 'val_run2_attn_off_rescaled_val_images'
+        output_folder = root_output_folder + 'Temporary/'
 
         imgs, targets = batch
 
@@ -218,25 +199,32 @@ class MaskClassificationInstance(LightningModule):
                 )
 
             # Upsample the masks. We believe this forces the code that computes the metrics to encode the masks efficiently.
-            preds[0]['masks'] = upsample(preds[0]['masks'])
-            targets_[0]['masks'] = upsample(targets_[0]['masks'])
+            preds[0]['masks'], in_w, in_l = upsample(preds[0]['masks'])
+            targets_[0]['masks'], _, _,  = upsample(targets_[0]['masks'])
             self.update_metrics_instance(preds, targets_, i)  # The original code did not have the underscore, but it seems that COCO uses the "iscrowd" version of the filed.
 
         # Enable this line if you want to save visualizations.
-        save_visualizations = False  # MAKE SURE YOU SET THE OUTPUT FOLDER CORRECTLY, WHEN YOU ENABLE THIS.
+        # TODO !!! MAKE SURE THE IMAGE SCALING IS SET TO [1, 1], WHEN RUNNING FOR VISUALIZATIONS !!!
+        save_visualizations = True  # MAKE SURE YOU SET THE OUTPUT FOLDER CORRECTLY, WHEN YOU ENABLE THIS.
         if save_visualizations:
+            # Downsample the predictions and the targets to the original image size.
+            p_masks = downsample(preds[0]['masks'], in_w, in_l)
+            t_masks = downsample(targets_[0]['masks'], in_w, in_l)
             self.visualize_instance_segmentation(preds[0],
+                                                 p_masks,
                                                  imgs[0],
                                                  batch_idx,
-                                                 targets[0],
+                                                 targets_[0],
+                                                 t_masks,
                                                  output_folder=output_folder,  # MAKE SURE YOU SET THIS CORRECTLY.
+                                                 image_path = targets[0].get('image_path', None),
                                                  score_thresh=0.8)
-
-        del imgs, targets, transformed_imgs, mask_logits_per_layer, class_logits_per_layer, mask_logits, preds, targets_, scores, labels, topk_indices, topk_scores, masks, mask_scores
+        # Release memory.
+        del imgs, targets, transformed_imgs, mask_logits_per_layer, class_logits_per_layer, mask_logits, preds, targets_, scores, labels, topk_indices, topk_scores, masks, mask_scores, p_masks, t_masks
         gc.collect()
         torch.cuda.empty_cache()
 
-    def visualize_instance_segmentation(self, preds, image, batch_idx, targets, output_folder, score_thresh=0.8):
+    def visualize_instance_segmentation(self, preds, p_masks,image, batch_idx, targets, t_masks, output_folder, image_path, score_thresh=0.8):
         '''Todo: Add docstring.'''
         with torch.no_grad():
             metric = JaccardIndex(task='binary')
@@ -244,7 +232,7 @@ class MaskClassificationInstance(LightningModule):
             #################################################
             # COMPUTE THE COLOR IMAGE WITH SEGMENT OVERLAYS #
             #################################################
-            masks = preds["masks"].squeeze(1)  # shape [N, H, W]
+            masks = p_masks  # preds["masks"].squeeze(1)  # shape [N, H, W]
             labels = preds["labels"]
             scores = preds["scores"]
 
@@ -287,7 +275,7 @@ class MaskClassificationInstance(LightningModule):
             # COMPUTE THE GT IMAGE, BLACK WITH BOX SEGMENTS #
             #################################################
             gt_image = np.zeros(color_img.shape)
-            gt_masks = targets['masks']
+            gt_masks = t_masks  # targets['masks']
             if gt_masks.dim() == 3:    # sometimes it's [1, H, W]
                 gt_masks = gt_masks.squeeze(0)
             gt_masks = gt_masks.cpu().numpy()
@@ -321,13 +309,13 @@ class MaskClassificationInstance(LightningModule):
 
             with open(f'{output_folder}/iou_log.csv', 'a', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([batch_idx, iou.item(), n_detections, n_gt_masks, n_detections - n_gt_masks])
+                writer.writerow([batch_idx, image_path, iou.item(), n_detections, n_gt_masks, n_detections - n_gt_masks])
             fig.suptitle(f"SemSeg IoU = {iou.item()}", fontsize=24)
 
             for ax in axes:
                 ax.axis("off")
             plt.tight_layout()
-            plt.savefig(f"/workspace/data/EOMT/Output/val_run2_attn_off_rescaled_val_images/{batch_idx:04d}.png")
+            plt.savefig(f"{output_folder}/{batch_idx:04d}.jpg")
             plt.close()
             plt.close(fig)
             del fig
