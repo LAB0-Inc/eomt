@@ -1,0 +1,92 @@
+#################################################################
+# Validation on the version of the dataset with low resolution. #
+#################################################################
+
+1. Initially, the RAM used would blow up.
+##################################################
+This took ~24 minutes to run on the workstation.
+RAM usage kept growing, until the process used 22 GB of RAM (total used RAM = 39 GB). WHY DOES IT KEEP GROWING? IF I USE PNG IMAGES IT GROWS FASTER.
+
+
+
+ weights from the checkpoint at /workspace/eomt/checkpoints/Run2/epoch=055-mAP=0.81.ckpt
+Validation DataLoader 0: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1995/1995 [25:05<00:00,  1.33it/s]
+mAP All: 86.9 | mAP Small: 20.0 | mAP Medium: 81.7 | mAP Large: 95.5
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          Validate metric           ┃            DataLoader 0            ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│                mAP                 │         0.8064582943916321         │
+│       metrics/val_ap_50_all        │         0.9588812589645386         │
+│   metrics/val_ap_50_all_block_-1   │         0.955446720123291          │
+│   metrics/val_ap_50_all_block_-2   │         0.9303451776504517         │
+│   metrics/val_ap_50_all_block_-3   │         0.9141846895217896         │
+│   metrics/val_ap_50_all_block_-4   │         0.7434131503105164         │
+│       metrics/val_ap_75_all        │         0.9196425676345825         │
+│   metrics/val_ap_75_all_block_-1   │         0.916778028011322          │
+│   metrics/val_ap_75_all_block_-2   │         0.8934308886528015         │
+│   metrics/val_ap_75_all_block_-3   │         0.8630554676055908         │
+│   metrics/val_ap_75_all_block_-4   │         0.687444269657135          │
+│         metrics/val_ap_all         │         0.8692175149917603         │
+│    metrics/val_ap_all_block_-1     │         0.865711510181427          │
+│    metrics/val_ap_all_block_-2     │         0.8414747714996338         │
+│    metrics/val_ap_all_block_-3     │         0.8117311596870422         │
+│    metrics/val_ap_all_block_-4     │         0.6441566348075867         │
+│      metrics/val_ap_large_all      │         0.9550313353538513         │
+│ metrics/val_ap_large_all_block_-1  │         0.9544085264205933         │
+│ metrics/val_ap_large_all_block_-2  │         0.9467543959617615         │
+│ metrics/val_ap_large_all_block_-3  │         0.9363710284233093         │
+│ metrics/val_ap_large_all_block_-4  │         0.8123522996902466         │
+│     metrics/val_ap_medium_all      │         0.8165298700332642         │
+│ metrics/val_ap_medium_all_block_-1 │         0.8079788088798523         │
+│ metrics/val_ap_medium_all_block_-2 │         0.7635797262191772         │
+│ metrics/val_ap_medium_all_block_-3 │         0.713470458984375          │
+│ metrics/val_ap_medium_all_block_-4 │         0.5327872633934021         │
+│      metrics/val_ap_small_all      │        0.20012207329273224         │
+│ metrics/val_ap_small_all_block_-1  │        0.19008055329322815         │
+│ metrics/val_ap_small_all_block_-2  │         0.1484212577342987         │
+│ metrics/val_ap_small_all_block_-3  │        0.10959411412477493         │
+│ metrics/val_ap_small_all_block_-4  │        0.03860330209136009         │
+└────────────────────────────────────┴────────────────────────────────────┘
+
+2. If we make the output matrices artifically larger before we feed them
+   to the metrics function, the RAM usage stays low (below 3.5 GB).
+   Validation takes ~25 minutes.
+
+   The mAP and the mAP_all are very similar for the two cases.
+##########################################################
+mAP All: 87.0 | mAP Small: 4.0 | mAP Medium: 55.8 | mAP Large: 92.8
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          Validate metric           ┃            DataLoader 0            ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│                mAP                 │         0.8068414926528931         │
+│       metrics/val_ap_50_all        │         0.9589811563491821         │
+│   metrics/val_ap_50_all_block_-1   │         0.9554598927497864         │
+│   metrics/val_ap_50_all_block_-2   │         0.930395245552063          │
+│   metrics/val_ap_50_all_block_-3   │         0.9141821265220642         │
+│   metrics/val_ap_50_all_block_-4   │         0.7433116436004639         │
+│       metrics/val_ap_75_all        │         0.9197061657905579         │
+│   metrics/val_ap_75_all_block_-1   │         0.9170828461647034         │
+│   metrics/val_ap_75_all_block_-2   │         0.8939101696014404         │
+│   metrics/val_ap_75_all_block_-3   │         0.8636114001274109         │
+│   metrics/val_ap_75_all_block_-4   │         0.6876486539840698         │
+│         metrics/val_ap_all         │         0.8697972297668457         │
+│    metrics/val_ap_all_block_-1     │         0.8661734461784363         │
+│    metrics/val_ap_all_block_-2     │         0.841925859451294          │
+│    metrics/val_ap_all_block_-3     │         0.8118343949317932         │
+│    metrics/val_ap_all_block_-4     │         0.6444762945175171         │
+│      metrics/val_ap_large_all      │         0.9284873604774475         │
+│ metrics/val_ap_large_all_block_-1  │         0.9257014393806458         │
+│ metrics/val_ap_large_all_block_-2  │         0.9103783369064331         │
+│ metrics/val_ap_large_all_block_-3  │         0.8905120491981506         │
+│ metrics/val_ap_large_all_block_-4  │         0.7454512119293213         │
+│     metrics/val_ap_medium_all      │         0.5575948357582092         │
+│ metrics/val_ap_medium_all_block_-1 │         0.5408884286880493         │
+│ metrics/val_ap_medium_all_block_-2 │         0.478622168302536          │
+│ metrics/val_ap_medium_all_block_-3 │        0.41076400876045227         │
+│ metrics/val_ap_medium_all_block_-4 │        0.24009160697460175         │
+│      metrics/val_ap_small_all      │        0.040391724556684494        │
+│ metrics/val_ap_small_all_block_-1  │        0.037206459790468216        │
+│ metrics/val_ap_small_all_block_-2  │        0.032419830560684204        │
+│ metrics/val_ap_small_all_block_-3  │        0.018967613577842712        │
+│ metrics/val_ap_small_all_block_-4  │        0.005077062640339136        │
+└────────────────────────────────────┴────────────────────────────────────┘
