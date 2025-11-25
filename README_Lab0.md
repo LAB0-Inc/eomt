@@ -7,7 +7,7 @@ docker run --gpus all -v ~/.lab0/data/:/workspace/data/ --shm-size=2g -it --rm n
 
 Then, the Docker image can be save to disk as `eomt:latest`. The following times, the image with the code can be opened like this:
 ```
-docker run --gpus all -v ~/.lab0/data/:/workspace/data/ --volume /etc/localtime:/etc/localtime:ro --volume /etc/timezone:/etc/timezone:ro --privileged --shm-size=2g --name EoMT -it  -v ~/.ssh:/root/.ssh:ro -v ~/.gitconfig:/root/.gitconfig:ro eomt:latest
+docker run --gpus all -v ~/.lab0/data/:/workspace/data/ --volume /etc/localtime:/etc/localtime:ro --volume /etc/timezone:/etc/timezone:ro   -v ~/.gitconfig:/root/.gitconfig:ro -v $SSH_AUTH_SOCK:/ssh-agent -e SSH_AUTH_SOCK=/ssh-agent  --privileged --shm-size=2g --name EoMT -it eomt:latest
 ```
 
 ## Git repo
@@ -45,9 +45,12 @@ The best three checkpoints are saved for the latest training in `checkpoints`. *
 The script is `validate_SCD.sh`. TODO: I need to check what it produces in output.
 
 # PyTorch inference on one image (or more)
-The original authors provide the `inference.ipynb` notebook.
+The original authors provide the `inference.ipynb` notebook. [Not sure if that is currently working]
 
-# TensorRT engine
+The `inference.py` script can run inference on a single image or on the full validation set.
+
+# Converting to TensorRT
+
 
 
 
