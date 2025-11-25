@@ -16,7 +16,8 @@ from PIL import Image
 from torch.utils.data import get_worker_info
 from torchvision import tv_tensors
 from torchvision.transforms.v2 import functional as F
-
+import zipfile
+import csv
 
 class Dataset(torch.utils.data.Dataset):
     def __init__(
@@ -162,7 +163,10 @@ class Dataset(torch.utils.data.Dataset):
                                 continue
 
             self.imgs.append(img_path.as_posix())
-
+            # Temp: save the list of training images.
+            with open("/workspace/data/EOMT/Output/val_run2_attn_off_rescaled_val_images/images.csv", "a", newline="") as f:
+                  writer = csv.writer(f)
+                  writer.writerow([len(self.imgs) -1, img_path.as_posix()])
             if not only_annotations_json:
                 self.targets.append(target_filename)
 
@@ -170,51 +174,102 @@ class Dataset(torch.utils.data.Dataset):
                 self.targets_instance.append(target_instance_filename)
 
     def __getitem__(self, index: int):
-        img_zip, target_zip, target_instance_zip = self._load_zips()
+        try:
+            img_zip, target_zip, target_instance_zip = self._load_zips()
+            # print(self.imgs[index])
+            with img_zip.open(self.imgs[index]) as img:
+                img = tv_tensors.Image(Image.open(img).convert("RGB"))
 
-        with img_zip.open(self.imgs[index]) as img:
-            img = tv_tensors.Image(Image.open(img).convert("RGB"))
+            target = None
+            if not self.only_annotations_json:
+                with target_zip.open(self.targets[index]) as target_file:
+                    target = tv_tensors.Mask(Image.open(target_file), dtype=torch.long)
 
-        target = None
-        if not self.only_annotations_json:
-            with target_zip.open(self.targets[index]) as target_file:
-                target = tv_tensors.Mask(Image.open(target_file), dtype=torch.long)
+                if img.shape[-2:] != target.shape[-2:]:
+                    target = F.resize(
+                        target,
+                        list(img.shape[-2:]),
+                        interpolation=F.InterpolationMode.NEAREST,
+                    )
 
-            if img.shape[-2:] != target.shape[-2:]:
-                target = F.resize(
-                    target,
-                    list(img.shape[-2:]),
-                    interpolation=F.InterpolationMode.NEAREST,
-                )
+            target_instance = None
+            if self.targets_instance:
+                with target_instance_zip.open(
+                    self.targets_instance[index]
+                ) as target_instance:
+                    target_instance = tv_tensors.Mask(
+                        Image.open(target_instance), dtype=torch.long
+                    )
 
-        target_instance = None
-        if self.targets_instance:
-            with target_instance_zip.open(
-                self.targets_instance[index]
-            ) as target_instance:
-                target_instance = tv_tensors.Mask(
-                    Image.open(target_instance), dtype=torch.long
-                )
+            masks, labels, is_crowd = self.target_parser(
+                target=target,
+                target_instance=target_instance,
+                stuff_classes=self.stuff_classes,
+                polygons_by_id=self.polygons_by_id.get(Path(self.imgs[index]).name, {}),
+                labels_by_id=self.labels_by_id.get(Path(self.imgs[index]).name, {}),
+                is_crowd_by_id=self.is_crowd_by_id.get(Path(self.imgs[index]).name, {}),
+                width=img.shape[-1],
+                height=img.shape[-2],
+            )
 
-        masks, labels, is_crowd = self.target_parser(
-            target=target,
-            target_instance=target_instance,
-            stuff_classes=self.stuff_classes,
-            polygons_by_id=self.polygons_by_id.get(Path(self.imgs[index]).name, {}),
-            labels_by_id=self.labels_by_id.get(Path(self.imgs[index]).name, {}),
-            is_crowd_by_id=self.is_crowd_by_id.get(Path(self.imgs[index]).name, {}),
-            width=img.shape[-1],
-            height=img.shape[-2],
-        )
+            target = {
+                "masks": tv_tensors.Mask(torch.stack(masks)),
+                "labels": torch.tensor(labels),
+                "is_crowd": torch.tensor(is_crowd),
+            }
 
-        target = {
-            "masks": tv_tensors.Mask(torch.stack(masks)),
-            "labels": torch.tensor(labels),
-            "is_crowd": torch.tensor(is_crowd),
-        }
+            if self.transforms is not None:
+                img, target = self.transforms(img, target)
 
-        if self.transforms is not None:
-            img, target = self.transforms(img, target)
+        except Exception as e:
+            print(f"Error loading sample #{index}, \"{self.imgs[index]}\", using sample #100 instead.")
+            # HACK THAT ALLOWS THE DATASET TO CONTINUE LOADING EVEN IF A SAMPLE IS CORRUPTED.
+            index = 100
+            img_zip, target_zip, target_instance_zip = self._load_zips()
+            with img_zip.open(self.imgs[index]) as img:
+                img = tv_tensors.Image(Image.open(img).convert("RGB"))
+
+            target = None
+            if not self.only_annotations_json:
+                with target_zip.open(self.targets[index]) as target_file:
+                    target = tv_tensors.Mask(Image.open(target_file), dtype=torch.long)
+
+                if img.shape[-2:] != target.shape[-2:]:
+                    target = F.resize(
+                        target,
+                        list(img.shape[-2:]),
+                        interpolation=F.InterpolationMode.NEAREST,
+                    )
+
+            target_instance = None
+            if self.targets_instance:
+                with target_instance_zip.open(
+                    self.targets_instance[index]
+                ) as target_instance:
+                    target_instance = tv_tensors.Mask(
+                        Image.open(target_instance), dtype=torch.long
+                    )
+
+            masks, labels, is_crowd = self.target_parser(
+                target=target,
+                target_instance=target_instance,
+                stuff_classes=self.stuff_classes,
+                polygons_by_id=self.polygons_by_id.get(Path(self.imgs[index]).name, {}),
+                labels_by_id=self.labels_by_id.get(Path(self.imgs[index]).name, {}),
+                is_crowd_by_id=self.is_crowd_by_id.get(Path(self.imgs[index]).name, {}),
+                width=img.shape[-1],
+                height=img.shape[-2],
+            )
+
+            target = {
+                "masks": tv_tensors.Mask(torch.stack(masks)),
+                "labels": torch.tensor(labels),
+                "is_crowd": torch.tensor(is_crowd),
+            }
+
+            if self.transforms is not None:
+                img, target = self.transforms(img, target)
+
 
         return img, target
 
@@ -232,6 +287,7 @@ class Dataset(torch.utils.data.Dataset):
             self.target_instance_zip = {}
 
         if worker not in self.zip:
+            # print(f'ZIP PATH = {self.zip_path}')
             self.zip[worker] = zipfile.ZipFile(self.zip_path)
         if worker not in self.target_zip:
             if self.target_zip_path:
