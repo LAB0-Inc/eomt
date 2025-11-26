@@ -57,4 +57,4 @@ The `inference.py` script can run inference on a single image or on the full val
 |------|-------|
 | configs/dinov3/coco/instance/eomt_large_640.yaml | Defines the training. |
 | training/mask_classification_instance.py | Defines, among other things, eval_step(). At the end of that you can enable saving segm. images. |
-| datasets/coco_instance.py | Contains the hard-coded extension for the input images. |
+| datasets/coco_instance.py | Contains the hard-coded extension for the input images, defines how train and val datasets lists are loaded. |

@@ -4,4 +4,4 @@ python3 main.py fit \
   --trainer.devices 1 \
   --trainer.accumulate_grad_batches 16 \
   --data.batch_size 1 \
-  --data.path /workspace/data/Datasets/SCD_for_EoMT/
+  --data.path /workspace/data/Datasets/SCD_low_res/
