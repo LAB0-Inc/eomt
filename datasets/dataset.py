@@ -163,10 +163,6 @@ class Dataset(torch.utils.data.Dataset):
                                 continue
 
             self.imgs.append(img_path.as_posix())
-            # Temp: save the list of training images.
-            with open("/workspace/data/EOMT/Output/val_run2_attn_off_rescaled_val_images/images.csv", "a", newline="") as f:
-                  writer = csv.writer(f)
-                  writer.writerow([len(self.imgs) -1, img_path.as_posix()])
             if not only_annotations_json:
                 self.targets.append(target_filename)
 
@@ -174,6 +170,7 @@ class Dataset(torch.utils.data.Dataset):
                 self.targets_instance.append(target_instance_filename)
 
     def __getitem__(self, index: int):
+        # index = 1206  # In case you want to test on a specific sample.
         try:
             img_zip, target_zip, target_instance_zip = self._load_zips()
             # print(self.imgs[index])
@@ -216,12 +213,12 @@ class Dataset(torch.utils.data.Dataset):
                 "masks": tv_tensors.Mask(torch.stack(masks)),
                 "labels": torch.tensor(labels),
                 "is_crowd": torch.tensor(is_crowd),
-                "image_path": self.imgs[index],  # For debugging purposes.
             }
 
             if self.transforms is not None:
                 img, target = self.transforms(img, target)
 
+            target["image_path"] = self.imgs[index]  # For debugging purposes.
         except Exception as e:
             print(f"Error loading sample #{index}, \"{self.imgs[index]}\", using sample #100 instead.")
             # HACK THAT ALLOWS THE DATASET TO CONTINUE LOADING EVEN IF A SAMPLE IS CORRUPTED.
@@ -266,12 +263,12 @@ class Dataset(torch.utils.data.Dataset):
                 "masks": tv_tensors.Mask(torch.stack(masks)),
                 "labels": torch.tensor(labels),
                 "is_crowd": torch.tensor(is_crowd),
-                "image_path": self.imgs[index],  # For debugging purposes.
             }
 
             if self.transforms is not None:
                 img, target = self.transforms(img, target)
 
+            target["image_path"] = self.imgs[index]  # For debugging purposes.
 
         return img, target
 
