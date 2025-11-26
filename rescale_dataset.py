@@ -1,6 +1,6 @@
 import json
 import os
-from PIL import Image
+from PIL import Image, ImageOps
 from pathlib import Path
 
 
@@ -24,6 +24,7 @@ def scale_coco_dataset(
         target_width: Target width for scaling calculation (default: 640)
         target_height: Target height for scaling calculation (default: 480)
     """
+    n_wrong_dimensions = 0
 
     # Load COCO JSON
     print(f"Loading {json_path}...")
@@ -48,20 +49,47 @@ def scale_coco_dataset(
 
         # Open image
         try:
-            img = Image.open(img_path)
+            img_tmp = Image.open(img_path)
+
+            # Handle EXIF orientation
+            # 0: Should not happen, but probably means no rotation
+            # 1: Normal (no rotation)
+            # 3: Rotated 180°
+            # 6: Rotated 90° CW
+            # 8: Rotated 90° CCW
+            orientation = 1  # Default orientation.
+            exif_data = img_tmp.getexif()
+            for tag_id, value in exif_data.items():
+                tag_name = Image.ExifTags.TAGS.get(tag_id, tag_id)
+                if tag_name == 'Orientation':
+                    orientation = value
+                    break
+            if orientation > 1:
+                # Apply EXIF orientation to image.
+                img = ImageOps.exif_transpose(img_tmp)
+            else:
+                img = img_tmp
+
         except FileNotFoundError:
             print(f"Warning: Image {img_filename} not found, skipping...")
             continue
 
         try:
-            original_width = img_info['width']
-            original_height = img_info['height']
+            original_width, original_height = img.size
 
             # Calculate scaling factor so that the largest dimension matches the desired value.
             # (The image will later have to be padded, to make the smallest dimension also match the desired value).
             width_factor = target_width / original_width
             height_factor = target_height / original_height
             factor = min(width_factor, height_factor)  # Min factor = largest scaling.
+
+            if original_width != img_info['width'] or original_height != img_info['height']:
+                n_wrong_dimensions += 1
+                print(f"Warning: Image size mismatch for sample {img_index}, {img_filename}, using actual size.")
+                # wrong_width_factor = target_width / img_info['width']
+                # wrong_height_factor = target_height / img_info['height']
+                # wrong_factor = min(wrong_width_factor, wrong_height_factor)
+                # print(f'factor: {factor:0.1f}, wrong_factor: {wrong_factor:0.1f}')
 
             # Calculate new dimensions
             new_width = int(original_width * factor)
@@ -142,6 +170,7 @@ def scale_coco_dataset(
         json.dump(coco_data, f, indent=2)
 
     print("Done!")
+    print(f"Number of images with wrong dimensions: {n_wrong_dimensions}")
 
 
 if __name__ == "__main__":
