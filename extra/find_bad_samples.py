@@ -15,29 +15,33 @@ with open(input_csv_path, 'r') as f:
         n_gt_masks = int(row[4])
         data.append((batch_idx, image_path, iou, n_detections, n_gt_masks))
 
-# Count samples for IoU ranges
-iou_thresholds = [0.0, 0.5, 0.7, 0.9, 1.0]
-counts = {f"{iou_thresholds[i]}-{iou_thresholds[i+1]}": 0 for i in range(len(iou_thresholds)-1)}
-for _, _, iou, _, _ in data:
-    for i in range(len(iou_thresholds)-1):
-        if iou_thresholds[i] <= iou < iou_thresholds[i+1]:
-            counts[f"{iou_thresholds[i]}-{iou_thresholds[i+1]}"] += 1
-            break
+indices = [1206, 1258, 1577, 1814, 2219, 2597, 2599, 2721, 2790, 2808, 2833, 2939, 3236, 3242, 3312, 3683, 3954, 4735, 5201, 5638, 5720]
 
-print("IoU Range Counts:")
-for range_key, count in counts.items():
-    print(f"  {range_key}: {count}")
+for index in indices:
+    print(data[index][1][10:])
+# # Count samples for IoU ranges
+# iou_thresholds = [0.0, 0.5, 0.7, 0.9, 1.0]
+# counts = {f"{iou_thresholds[i]}-{iou_thresholds[i+1]}": 0 for i in range(len(iou_thresholds)-1)}
+# for _, _, iou, _, _ in data:
+#     for i in range(len(iou_thresholds)-1):
+#         if iou_thresholds[i] <= iou < iou_thresholds[i+1]:
+#             counts[f"{iou_thresholds[i]}-{iou_thresholds[i+1]}"] += 1
+#             break
 
-# bad_samples = [d for d in data if d[2] < 0.9]
-# print(f"Number of bad samples (IoU < 0.5): {len(bad_samples)}")
+# print("IoU Range Counts:")
+# for range_key, count in counts.items():
+#     print(f"  {range_key}: {count}")
 
-# Sort by IoU
-data.sort(key=lambda x: x[2])
+# # bad_samples = [d for d in data if d[2] < 0.9]
+# # print(f"Number of bad samples (IoU < 0.5): {len(bad_samples)}")
 
-pass
+# # Sort by IoU
+# data.sort(key=lambda x: x[2])
 
-# IoU Range Counts:
-#   0.0-0.5: 348
-#   0.5-0.7: 380
-#   0.7-0.9: 524
-#   0.9-1.0: 12826
+# pass
+
+# # IoU Range Counts:
+# #   0.0-0.5: 348
+# #   0.5-0.7: 380
+# #   0.7-0.9: 524
+# #   0.9-1.0: 12826

@@ -1,0 +1,13 @@
+I created a new low_res version of the dataset on Nov. 26.
+
+This one should have all the images upright, because the new version of rescale_dataset.py takes the EXIF information into account.
+
+# Training set
+Still, four images had different resolution information in the annotation with respect to the actual resolution:
+
+Warning: Image size mismatch for sample 11096, net (957).jpg, using actual size.
+Warning: Image size mismatch for sample 11516, net (2954).jpg, using actual size.
+Warning: Image size mismatch for sample 12517, net (4114).jpg, using actual size.
+Warning: Image size mismatch for sample 14077, net (11006).jpg, using actual size.
+
+Furthermore, image 82.jpeg cannot be loaded, I should remove it from the annotations.
