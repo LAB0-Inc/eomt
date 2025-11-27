@@ -157,7 +157,7 @@ class COCOInstance(LightningDataModule):
 
     def setup(self, stage: Union[str, None] = None) -> LightningDataModule:
         dataset_kwargs = {
-            "img_suffix": ".jpg",
+            "img_suffix": ".png",
             "target_parser": self.target_parser,
             "only_annotations_json": True,
             "check_empty_targets": self.check_empty_targets,

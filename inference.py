@@ -60,7 +60,7 @@ def draw_black_border(sem, inst, mapping):
     return out
 
 
-def plot_panoptic_results(img, sem_pred, inst_pred, sem_target, inst_target, output_path_base):
+def plot_panoptic_results(img, sem_pred, inst_pred, sem_target, inst_target, output_path):
     all_ids = np.union1d(np.unique(sem_pred), np.unique(sem_target))
     mapping = {
         s: (
@@ -90,7 +90,7 @@ def plot_panoptic_results(img, sem_pred, inst_pred, sem_target, inst_target, out
         ax.axis("off")
 
     plt.tight_layout()
-    plt.savefig(f"{output_path_base}.jpg")
+    plt.savefig(f"{output_path}.jpg")
     plt.close()
 
 
@@ -193,7 +193,7 @@ step = 1
 for img_idx in [0]:                                 # Single image.
     # Get the sample.
     img, target = val_dataset[img_idx]
-    output_path_base =  os.path.join(output_dir, f"image_{img_idx:04d}")
+    output_path =  os.path.join(output_dir, f"image_{img_idx:04d}")
 
     ######################
     # Run the inference. #
@@ -202,12 +202,12 @@ for img_idx in [0]:                                 # Single image.
         sem_pred, inst_pred, sem_target, inst_target = infer_panoptic(img, target)
 
         # Compute and save inst. seg. image.
-        plot_panoptic_results(img, sem_pred, inst_pred, sem_target, inst_target, output_path_base)
+        plot_panoptic_results(img, sem_pred, inst_pred, sem_target, inst_target, output_path)
 
-        print(f"Processed {output_path_base}")
+        print(f"Processed {output_path}")
         del img, target, sem_pred, inst_pred, sem_target, inst_target
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
     except Exception:
-        print(f'WARNING: I had to skip image {output_path_base}, for some reason.')
+        print(f'WARNING: I had to skip image {output_path}, for some reason.')
 
