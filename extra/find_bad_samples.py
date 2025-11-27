@@ -2,8 +2,8 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 
-# input_csv_path = '/workspace/data/EOMT/Output/val_run2_on_train_GOOD/iou_log.csv'
-input_csv_path = '/workspace/data/EOMT/Output/val_run2_on_val_GOOD/iou_log.csv'
+input_csv_path = '/workspace/data/EOMT/Output/val_run2_on_train_GOOD/iou_log.csv'
+# input_csv_path = '/workspace/data/EOMT/Output/val_run2_on_val_GOOD/iou_log.csv'
 
 data = []
 with open(input_csv_path, 'r') as f:
@@ -34,8 +34,12 @@ for range_key, count in counts.items():
 # Sort by IoU
 data.sort(key=lambda x: x[2])
 
-# # Print 40 samples with worst IoU.
-# for index, entry in enumerate(data[0:60]):
-#     print(f"{index}: {entry}")
+# Print samples with IoU < threshold.
+threshold = 0.80
+for index, entry in enumerate(data):
+    if entry[2] < threshold:
+        print(f"{index}: {entry}")
+    else:
+        break  # The list is sorted, so we can stop here.
 
 pass

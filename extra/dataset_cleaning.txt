@@ -1,7 +1,7 @@
 I created a new low_res version of the dataset on Nov. 26.
 This one has all the images upright, because the new version of rescale_dataset.py takes the EXIF information into account.
 
-This was the distribution of the Semantic Segmentation IoUs:
+This was the distribution of the Semantic Segmentation IoUs (comparing the estimated and GT segmentation):
 *Training*
 IoU range: count
   0.0-0.2: 3
@@ -38,12 +38,215 @@ Warning: Image size mismatch for sample 11516, net (2954).jpg, using actual size
 Warning: Image size mismatch for sample 12517, net (4114).jpg, using actual size.
 Warning: Image size mismatch for sample 14077, net (11006).jpg, using actual size.
 
-It turns out, those samples (among others) do not have GT annotations. We removed all samples without GTfrom the new version of the training set (see below).
+It turns out, those samples (among others) do not have GT annotations. We removed all samples without GTfrom the new version of the training set (see above).
 Furthermore, image 82.jpeg is corrupted and cannot be loaded, so we did not use it in the new version of the training set.
 
-Images with IoU > 0.7 and close to it are mostly images with boxes inside boxes, for which the human annotator and the detection took an opposite decision on whether to detect the outer box. Those images are a bit weird, but are not wrong, so we did not remove them.
-So we looked at the images with IoU < 0.7, searching for images to be removed from the training set.
+We looked at the images with IoU < 0.76 (the 140 images with the worst match between estimated and GT IoU), searching for images to be removed from the training set.
+We stopped at this threshold considering that we should have gotten the images with the worse labelling for the training, even though there were a few images with incorrect GT even with higher IoU matches.
+For the images with incorrect GT labels, the best action would be to re-label them, but that is labour intensive. So, for now, we simply deleted them.
 
+0: (12624, 'train2017/net (7945).png', 0.02, 17, 4)         DELETED - Weird image with books, rather than boxes.
+1: (10184, 'train2017/net (391).png', 0.06, 19, 1)          DELETED - Wrong GT.
+2: (5681, 'train2017/IMG_20200917_122614.png', 0.19, 1, 9)  INTERESTING: why is detection not working here?
+3: (13957, 'train2017/y (147).png', 0.25, 1, 8)             DELETED - Wrong GT
+4: (12472, 'train2017/net (7714).png', 0.27, 30, 7)         DELETED - Confusing image: it has paper bags that look like boxes, but are not labelled.
+5: (1643, 'train2017/2021.png', 0.34, 3, 9)                 DELETED - Few boxes, very far.
+6: (7630, 'train2017/net (14044).png', 0.41, 19, 18)        Boxes in box
+7: (12107, 'train2017/net (7195).png', 0.42, 14, 6)         DELETED - Confusing image: it has box-like things that are not labelled.
+8: (12912, 'train2017/net (8343).png', 0.43, 11, 10)        Boxes in box
+9: (13146, 'train2017/net (8716).png', 0.43, 6, 4)          Boxes in box
+10: (1733, 'train2017/213.png', 0.44, 4, 3)                 INTERESTING: why is detection not working here?
+
+11: (7085, 'train2017/net (12775).png', 0.44, 26, 24)       Boxes in box
+12: (7349, 'train2017/net (13438).png', 0.44, 12, 11)       Boxes in box
+13: (11158, 'train2017/net (5747).png', 0.44, 18, 15)       Boxes in box
+14: (6618, 'train2017/net (11625).png', 0.45, 19, 18)       Boxes in box
+15: (10300, 'train2017/net (4090).png', 0.45, 21, 20)       Boxes in box
+16: (12112, 'train2017/net (7202).png', 0.45, 19, 4)        DELETED - Many small boxes are not labelled.
+17: (13169, 'train2017/net (8744).png', 0.45, 13, 12)       Boxes in box
+18: (7589, 'train2017/net (13957).png', 0.48, 21, 20)       Boxes in box
+19: (10828, 'train2017/net (5237).png', 0.48, 21, 23)       DELETED - Confusing: it is not clear if a big item is a box or not.
+20: (6669, 'train2017/net (11738).png', 0.49, 21, 20)       Boxes in box
+
+21: (9518, 'train2017/net (2907).png', 0.49, 9, 8)          Boxes in box
+22: (10897, 'train2017/net (5346).png', 0.49, 59, 228)      INTERESTING - Image with a huge number of boxes, the detector struggles.
+23: (6846, 'train2017/net (12218).png', 0.5, 7, 6)          Boxes in box
+24: (12785, 'train2017/net (8158).png', 0.5, 9, 8)          Boxes in box
+25: (2951, 'train2017/3 (5).png', 0.51, 11, 8)              Confusing: the lid of a tote is detected as a box.
+26: (6726, 'train2017/net (11911).png', 0.51, 7, 6)         Boxes in box
+27: (8664, 'train2017/net (15942).png', 0.51, 6, 7)         Boxes in box
+28: (12862, 'train2017/net (8275).png', 0.51, 10, 9)        Boxes in box
+29: (6774, 'train2017/net (12028).png', 0.53, 43, 40)       Boxes in box
+30: (8627, 'train2017/net (15877).png', 0.54, 18, 19)       Boxes in box
+
+31: (8636, 'train2017/net (15899).png', 0.54, 9, 3)         DELETED - Big oil cans look like boxes, but are not labelled as such.
+32: (7261, 'train2017/net (13237).png', 0.55, 11, 10)       Boxes in box
+33: (7481, 'train2017/net (13722).png', 0.55, 7, 6)         Boxes in box
+34: (10122, 'train2017/net (3812).png', 0.55, 11, 10)       Boxes in box
+35: (13630, 'train2017/net (9955).png', 0.55, 17, 16)       Boxes in box
+36: (7220, 'train2017/net (13122).png', 0.56, 17, 16)       Boxes in box
+37: (12128, 'train2017/net (7221).png', 0.56, 21, 9)        DELETED - Many of the box-like objects are not labelled.
+38: (13408, 'train2017/net (9098).png', 0.56, 39, 24)       DELETED - Many boxes are not labelled.
+39: (10033, 'train2017/net (3660).png', 0.57, 7, 6)         Boxes in box
+40: (11788, 'train2017/net (6687).png', 0.57, 25, 24)       Boxes in box
+
+41: (13423, 'train2017/net (9118).png', 0.57, 29, 24)       Boxes in box
+42: (6806, 'train2017/net (12096).png', 0.58, 31, 30)       Boxes in box
+43: (8276, 'train2017/net (15259).png', 0.58, 6, 7)         Boxes in box
+44: (2154, 'train2017/257.png', 0.59, 4, 2)                 DELETED - One tote is not labelled.
+45: (7022, 'train2017/net (12605).png', 0.59, 26, 23)       Confusing - Not clear if division between box rows are boxes or not.
+46: (7696, 'train2017/net (14194).png', 0.59, 21, 20)       Boxes in box
+47: (1188, 'train2017/2 (100).png', 0.6, 5, 4)              INTERESTING - The detector struggles. Top-view image?
+48: (3816, 'train2017/4 (106).png', 0.6, 8, 6)              DELETED - Big boxes at the back are not annotated.
+49: (10297, 'train2017/net (4084).png', 0.6, 37, 14)        DELETED - Many boxes are not annotated.
+50: (11550, 'train2017/net (6339).png', 0.6, 11, 10)        Boxes in box
+
+51: (13404, 'train2017/net (9091).png', 0.6, 13, 12)        Boxes in box
+52: (2659, 'train2017/3 (194).png', 0.61, 3, 2)             Confusing: in the object in the middle a box?
+53: (6490, 'train2017/net (11319).png', 0.61, 6, 5)         Boxes in box
+54: (7469, 'train2017/net (13697).png', 0.61, 13, 12)       Boxes in box
+55: (7886, 'train2017/net (14639).png', 0.61, 17, 16)       DELETED - Confusing: is the thing in front a box or a sign?
+56: (10610, 'train2017/net (480).png', 0.61, 42, 32)        DELETED - Many boxes/faces are not annotated.
+57: (13000, 'train2017/net (8486).png', 0.61, 18, 16)       Boxes in box
+58: (6949, 'train2017/net (12448).png', 0.62, 15, 14)       Boxes in box
+59: (9810, 'train2017/net (3323).png', 0.63, 30, 29)        Boxes in box
+60: (12117, 'train2017/net (7209).png', 0.63, 19, 13)       DELETED - Not all boxes are annotated.
+
+61: (7937, 'train2017/net (14710).png', 0.64, 10, 11)       Boxes in box
+62: (8179, 'train2017/net (15093).png', 0.64, 17, 18)       Boxes in box
+63: (9814, 'train2017/net (3329).png', 0.64, 41, 39)        Boxes in box
+64: (10408, 'train2017/net (4245).png', 0.64, 54, 48)       Boxes in box
+65: (11937, 'train2017/net (6922).png', 0.64, 16, 16)       Boxes in box
+66: (12130, 'train2017/net (7223).png', 0.65, 23, 19)       DELETED - Some boxes are not labelled.
+67: (13638, 'train2017/net (9988).png', 0.65, 22, 12)       DELETED - Some boxes are not labelled.
+68: (8252, 'train2017/net (15230).png', 0.66, 15, 15)       Boxes in box
+69: (10487, 'train2017/net (4397).png', 0.66, 7, 6)         Boxes in box
+70: (13370, 'train2017/net (9038).png', 0.66, 33, 15)       DELETED - Some boxes are not labelled.
+
+71: (5584, 'train2017/IMG_20200917_094504.png', 0.67, 13, 11)  DELETED - Confusing: one large thing is not a box.
+72: (6694, 'train2017/net (11825).png', 0.67, 11, 10)       Boxes in box
+73: (8229, 'train2017/net (15189).png', 0.67, 11, 12)       Boxes in box
+74: (8423, 'train2017/net (15504).png', 0.67, 9, 10)        Boxes in box
+75: (10140, 'train2017/net (3840).png', 0.67, 10, 9)        DELETED - Some boxes are not labelled.
+76: (12339, 'train2017/net (7537).png', 0.67, 20, 19)       Boxes in box
+77: (171, 'train2017/1 (28).png', 0.68, 8, 6)               DELETED - Some boxes are not labelled.
+78: (5929, 'train2017/l (111).png', 0.68, 27, 19)           DELETED - Some boxes are not labelled.
+79: (9601, 'train2017/net (3030).png', 0.68, 14, 10)        DELETED - Some boxes are not labelled.
+80: (11518, 'train2017/net (6280).png', 0.68, 21, 20)       Boxes in box
+
+81: (1568, 'train2017/2 (488).png', 0.69, 5, 3)             INTERESTING - The detector struggles.
+82: (1695, 'train2017/2089.png', 0.69, 4, 3)                DELETED - One big box is not labelled.
+83: (3858, 'train2017/4 (152).png', 0.69, 2, 1)             One box is not labelled.
+84: (12997, 'train2017/net (8480).png', 0.69, 30, 26)       A couple of signs are detected as boxes.
+85: (13429, 'train2017/net (913).png', 0.69, 8, 5)          Small res, confusing.
+86: (2593, 'train2017/3 (125).png', 0.7, 5, 6)              One object is not detected.
+87: (6537, 'train2017/net (11439).png', 0.7, 8, 6)          DELETED - One big object is not labelled.
+88: (6605, 'train2017/net (11588).png', 0.7, 7, 6)          Boxes in box
+89: (7007, 'train2017/net (12583).png', 0.7, 13, 12)        Boxes in box
+90: (8559, 'train2017/net (15751).png', 0.7, 12, 13)        Boxes in box
+
+91: (8585, 'train2017/net (15804).png', 0.7, 6, 9)          Boxes in box
+92: (9397, 'train2017/net (2729).png', 0.7, 2, 6)           INTERESTING - Detector struggles.
+93: (10071, 'train2017/net (3726).png', 0.7, 17, 16)        Boxes in box
+94: (10797, 'train2017/net (5184).png', 0.7, 30, 26)        DELETED - Some boxes are not labelled.
+95: (12454, 'train2017/net (7693).png', 0.7, 31, 27)        Boxes in box
+96: (1362, 'train2017/2 (274).png', 0.71, 4, 3)             INTERESTING - Detector struggles.
+97: (2817, 'train2017/3 (359).png', 0.71, 19, 3)            DELETED - Bad GT
+98: (5930, 'train2017/l (112).png', 0.71, 31, 23)           DELETED - Some boxes are not labelled.
+99: (7994, 'train2017/net (14816).png', 0.71, 22, 22)       Boxes in box
+100: (7148, 'train2017/net (12952).png', 0.72, 11, 10)      Boxes in box
+
+101: (8109, 'train2017/net (14986).png', 0.72, 6, 7)        Boxes in box
+102: (9395, 'train2017/net (2725).png', 0.72, 92, 70)       INTERESTING - Many boxes, low res, detector struggles.
+103: (11294, 'train2017/net (597).png', 0.72, 11, 9)        DELETED - Some boxes are not labelled.
+104: (12712, 'train2017/net (8055).png', 0.72, 19, 18)      Boxes in box
+105: (4198, 'train2017/4 (87).png', 0.73, 9, 8)             One box not labelled.
+106: (7315, 'train2017/net (13364).png', 0.73, 12, 11)      Maybe the detector is missing one detection.
+107: (7648, 'train2017/net (14079).png', 0.73, 26, 25)      Boxes in box
+108: (7778, 'train2017/net (14397).png', 0.73, 10, 9)       Boxes in box
+109: (10249, 'train2017/net (4018).png', 0.73, 11, 10)      Boxes in box
+110: (10296, 'train2017/net (4082).png', 0.73, 31, 30)      Boxes in box
+
+111: (10320, 'train2017/net (412).png', 0.73, 12, 11)       Boxes in box
+112: (11592, 'train2017/net (6399).png', 0.73, 16, 15)      Maybe the detector is missing one detection.
+113: (13604, 'train2017/net (9850).png', 0.73, 13, 4)       DELETED - Many boxes not labelled.
+114: (312, 'train2017/1 (56).png', 0.74, 15, 7)             DELETED - Many boxes not labelled.
+115: (8306, 'train2017/net (1531).png', 0.74, 23, 22)       Boxes in box
+116: (8778, 'train2017/net (1632).png', 0.74, 8, 6)         Not clear if two boxes are not labelled.
+117: (9515, 'train2017/net (2904).png', 0.74, 23, 22)       Boxes in box
+118: (10211, 'train2017/net (3948).png', 0.74, 7, 6)        Boxes in box
+119: (11159, 'train2017/net (5750).png', 0.74, 77, 57)      DELETED - Many boxes not labelled.
+120: (11710, 'train2017/net (6575).png', 0.74, 9, 18)       DELETED - Confusing: some boxes are behind plexiglass, some are reflections.
+
+121: (12212, 'train2017/net (7347).png', 0.74, 16, 15)      Boxes in box
+122: (12469, 'train2017/net (7711).png', 0.74, 55, 40)      DELETED - Many boxes not labelled.
+123: (12889, 'train2017/net (8310).png', 0.74, 5, 4)        Confusing.
+124: (7335, 'train2017/net (13403).png', 0.75, 13, 12)      The detector mistakenly detects one cylinder-shaped container for a box.
+125: (7366, 'train2017/net (13470).png', 0.75, 9, 8)        Boxes in box
+126: (7772, 'train2017/net (14381).png', 0.75, 8, 6)        Boxes in box
+127: (8466, 'train2017/net (15578).png', 0.75, 27, 19)      DELETED - Many boxes not labelled.
+128: (9275, 'train2017/net (2555).png', 0.75, 94, 179)      INTERESTING - The detector struggles because of a huge number of boxes.
+129: (10803, 'train2017/net (5191).png', 0.75, 26, 23)      INTERESTING - The detector detects some boxes in a picture.
+130: (11203, 'train2017/net (582).png', 0.75, 16, 11)       DELETED - Many boxes not labelled.
+
+131: (12537, 'train2017/net (7814).png', 0.75, 41, 14)      DELETED - Many boxes not labelled.
+132: (13084, 'train2017/net (861).png', 0.75, 21, 22)       Confusing: one box only has one of its faces labelled.
+133: (1363, 'train2017/2 (275).png', 0.76, 1, 1)            INTERESTING - The detector struggles.
+134: (7394, 'train2017/net (13532).png', 0.76, 12, 9)       Not clear if detected objects are actually boxes
+135: (8690, 'train2017/net (15979).png', 0.76, 6, 7)        Boxes in box
+136: (8701, 'train2017/net (15998).png', 0.76, 10, 12)      Boxes in box
+137: (10164, 'train2017/net (3879).png', 0.76, 13, 12)      Boxes in box
+138: (12010, 'train2017/net (7033).png', 0.76, 16, 12)      DELETED - Many boxes not labelled.
+139: (12612, 'train2017/net (7930).png', 0.76, 21, 19)      False positive on some object that is not a box.
+140: (13599, 'train2017/net (9811).png', 0.76, 7, 3)        DELETED - Many boxes not labelled.
+
+## We removed the images we marked as 'DELETED' from training
+We removed those images using `delete_images_from_dataset.py`.
+
+We removed 41 images, resulting in a training set of 14065 images:
+filenames_to_remove = [
+    'net (7945).png',  # Weird image with books, rather than boxes.
+    'net (391).png',   # Wrong GT.
+    'y (147).png',     # Wrong GT.
+    'net (7714).png',  # Confusing image: it has paper bags that look like boxes, but are not labelled.
+    '2021.png',        # Few boxes, very far.
+    'net (7195).png',  # Confusing image: it has box-like things that are not labelled.
+    'net (7202).png',  # Many small boxes are not labelled
+    'net (5237).png',  # Confusing: not clear if big object is a box or not.
+    'net (15899).png', # Big oil cans look like boxes, but are not labelled as such.
+    'net (7221).png',  # Many box-like objects are not labelled.
+    'net (9098).png',  # Many boxes are not labelled.
+    '257.png',         # One tote is not labelled.
+    '4 (106).png',     # Big boxes at the back are not annotated.
+    'net (4084).png',  # Many boxes are not labelled.
+    'net (14639).png', # Not clear if a large thing is a box or not.
+    'net (480).png',   # Many boxes/faces are not annotated.
+    'net (7209).png',  # Many boxes are not labelled.
+    'net (7223).png',  # Many boxes are not labelled.
+    'net (9988).png',  # Many boxes are not labelled.
+    'net (9038).png',  # Many boxes are not labelled.
+    'IMG_20200917_094504.png', # Confusing: one large thing is not a box.
+    'net (3840).png',  # One large box is not labelled.
+    '1 (28).png',      # One large box is not labelled.
+    'l (111).png',     # Many boxes are not labelled.
+    'net (3030).png',  # Many boxes are not labelled.
+    '2089.png',        # One big box is not labelled.
+    'net (11439).png', # One big box is not labelled.
+    'net (5184).png',  # Many boxes are not labelled.
+    '3 (359).png',     # Bad GT.
+    'l (112).png',     # Many boxes are not labelled.
+    'net (597).png',   # Many boxes are not labelled.
+    'net (9850).png',  # Many boxes are not labelled.
+    '1 (56).png',      # Many boxes are not labelled.
+    'net (5750).png',  # Many boxes are not labelled.
+    'net (6575).png',  # Confusing: some boxes behind plexiglass, some labels are on reflections.
+    'net (7711).png',  # Many boxes are not labelled.
+    'net (15578).png', # Many boxes are not labelled.
+    'net (582).png',   # Many boxes are not labelled.
+    'net (7814).png',  # Many boxes are not labelled.
+    'net (7033).png',  # Many boxes are not labelled.
+    'net (9811).png'   # Many boxes are not labelled.
+]
 
 
 # Validation set
@@ -107,9 +310,9 @@ We removed the following images using `delete_images_from_dataset.py`:
     'net (7190).png',  # Wrong GT: many boxes are not labelled.
 
 # Final number of samples
-After the cleaning, this is the number of samples for each partition of the dataset.
+After the cleaning, this is the number of samples for each partition of the dataset:
 
-Train - TODO samples
+Train - 14065 samples
 Val - 1995 samples
 
 It is the number of images on the disk, the number of ['image'] entries in the JSON
