@@ -1,13 +1,118 @@
 I created a new low_res version of the dataset on Nov. 26.
+This one has all the images upright, because the new version of rescale_dataset.py takes the EXIF information into account.
 
-This one should have all the images upright, because the new version of rescale_dataset.py takes the EXIF information into account.
+This was the distribution of the Semantic Segmentation IoUs:
+*Training*
+IoU range: count
+  0.0-0.2: 3
+  0.2-0.4: 3
+  0.4-0.5: 17
+  0.5-0.7: 63
+  0.7-0.8: 85
+  0.8-0.9: 420
+  0.9-0.95: 1666
+  0.95-1.0: 11820
+
+*Validation*
+IoU range: count
+  0.0-0.2: 2
+  0.2-0.4: 1
+  0.4-0.5: 5
+  0.5-0.7: 13
+  0.7-0.8: 24
+  0.8-0.9: 71
+  0.9-0.95: 264
+  0.95-1.0: 1613
+
+
+# We removed images that do not have annotations from JSON and from the disk.
+This was performed with `remove_images_without_labels.py`. 30 images/samples were removed from the training data set, while the validation one was already clean.
+This resulted in:
+Train - 14106 samples
+Val - 1995 samples
 
 # Training set
-Still, four images had different resolution information in the annotation with respect to the actual resolution:
-
+Four images had different resolution information in the annotation with respect to the actual resolution:
 Warning: Image size mismatch for sample 11096, net (957).jpg, using actual size.
 Warning: Image size mismatch for sample 11516, net (2954).jpg, using actual size.
 Warning: Image size mismatch for sample 12517, net (4114).jpg, using actual size.
 Warning: Image size mismatch for sample 14077, net (11006).jpg, using actual size.
 
-Furthermore, image 82.jpeg cannot be loaded, I should remove it from the annotations.
+It turns out, those samples (among others) do not have GT annotations. We removed all samples without GTfrom the new version of the training set (see below).
+Furthermore, image 82.jpeg is corrupted and cannot be loaded, so we did not use it in the new version of the training set.
+
+Images with IoU > 0.7 and close to it are mostly images with boxes inside boxes, for which the human annotator and the detection took an opposite decision on whether to detect the outer box. Those images are a bit weird, but are not wrong, so we did not remove them.
+So we looked at the images with IoU < 0.7, searching for images to be removed from the training set.
+
+
+
+# Validation set
+These are the 40 samples with worst IoU:
+(1369, 'val2017/net (3139).png', 0.05, 41, 26)  Difficult/confusing image. Some things are not boxes?
+
+(1894, 'val2017/net (9132).png', 0.07, 93, 5)   WRONG GT: lots of boxes are missing. DELETED.
+
+(1830, 'val2017/net (8519).png', 0.36, 11, 11)  Box in box. Outer box not labelled.
+(1111, 'val2017/net (13803).png', 0.4, 7, 6)    Box in box. Outer box not labelled.
+(1740, 'val2017/net (7543).png', 0.43, 27, 23)  Box in box. Outer box not labelled.
+(1223, 'val2017/net (15602).png', 0.45, 5, 4)   Difficult/confusing image. The thing at the back is not a box?
+(560, 'val2017/4 (219).png', 0.48, 5, 4)        An open box is not labelled, but it is detected.
+(1691, 'val2017/net (7075).png', 0.49, 37, 11)  Some things are not labelled as boxes, but they look like boxes.
+(1129, 'val2017/net (14220).png', 0.51, 7, 6)   Box in box. Outer box not labelled.
+(1566, 'val2017/net (5721).png', 0.53, 12, 11)  Box in box. Outer box not labelled.
+(1144, 'val2017/net (14460).png', 0.54, 11, 10) Box in box. Outer box not labelled.
+(1202, 'val2017/net (15153).png', 0.56, 20, 21) Box in box. Outer box IS labelled, but it is NOT detected.
+(1753, 'val2017/net (7652).png', 0.56, 25, 24)  Difficult/confusing image. The thing at the top is not a box.
+(1481, 'val2017/net (4721).png', 0.58, 13, 12)  Box in box. Outer box not labelled.
+(1237, 'val2017/net (15800).png', 0.59, 11, 12) Box in box. Outer box IS labelled, but it is NOT detected.
+(1698, 'val2017/net (7157).png', 0.59, 17, 7)   Difficult/confusing image. Some things are not boxes?
+
+(269, 'val2017/2293.png', 0.61, 8, 16)          WRONG GT: different image. DELETED.
+
+(1680, 'val2017/net (6959).png', 0.62, 11, 10)  Box in box. Outer box not labelled.
+(1544, 'val2017/net (5539).png', 0.63, 9, 10)   Box in box. Outer box IS labelled, but it is NOT detected.
+(1804, 'val2017/net (8243).png', 0.65, 21, 20)  Box in box. Outer box not labelled.
+(1041, 'val2017/net (12573).png', 0.68, 8, 9)   Box in box. Outer box not labelled.
+(1465, 'val2017/net (4337).png', 0.7, 6, 9)     Difficult/confusing image. Occluders in front of boxes.
+(1498, 'val2017/net (5100).png', 0.7, 4, 5)     Box in box. Outer box IS labelled, but it is NOT detected.
+(1385, 'val2017/net (3307).png', 0.71, 12, 11)  Difficult/confusing image. The thing at the top is not a box.
+(1695, 'val2017/net (7116).png', 0.72, 36, 23)  Wrong GT: some boxes are missing. KEPT, IT'S ONLY A FEW OF THE BOXES.
+(1902, 'val2017/net (9242).png', 0.72, 19, 13)  Wrong GT: a couple of boxes are missing, open flaps of boxes are missing. KEPT, IT'S ONLY A FEW OF THE BOXES.
+(1238, 'val2017/net (15801).png', 0.73, 11, 12) Box in box. Outer box IS labelled, but it is NOT detected.
+(1321, 'val2017/net (2627).png', 0.73, 10, 12)  Box in box. Outer box IS labelled, but it is NOT detected.
+(1923, 'val2017/net (9809).png', 0.74, 7, 6)    Box in box. Outer box IS labelled, but it is NOT detected.
+(838, 'val2017/IMG_20200917_121222.png', 0.75, 7, 8) THE DETECTOR DOES NOT WORK WELL ON THIS IMAGE. LACK OF LIGHT?
+(878, 'val2017/g3 (37).png', 0.75, 4, 6)        Wrong GT: one large boxe is missing.
+(1360, 'val2017/net (3002).png', 0.75, 10, 6)   Difficult/confusing image. There are reflections of boxes that are not labelled.
+(1674, 'val2017/net (6896).png', 0.75, 11, 10)  Box in box. Outer box not labelled.
+(1786, 'val2017/net (8069).png', 0.75, 13, 11)  Difficult/confusing image. Some boxes are seen through a plexiglass sheet.
+
+(1947, 'val2017/w (24).png', 0.76, 40, 15)      WRONG GT: different image. DELETED.
+
+(1348, 'val2017/net (2875).png', 0.77, 5, 9)    Difficult/confusing image. Some boxes are visible through some translucent material.
+
+(1637, 'val2017/net (6472).png', 0.77, 33, 33)  WRONG GT: the image and the GT have a different resolution. DELETED.
+
+(1703, 'val2017/net (7190).png', 0.77, 60, 18)  WRONG GT: many boxes are not labelled. DELETED.
+
+(1765, 'val2017/net (7810).png', 0.77, 28, 24)  This one might be OK, smaller errors.
+(1893, 'val2017/net (9128).png', 0.77, 10, 6)   WRONG GT: some boxes not labelled.
+
+## We removed images with an especially bad GT from validation
+We removed the following images using `delete_images_from_dataset.py`:
+    'net (9132).png',  # A lot of boxes are not labelled in GT.
+    '2293.png',        # Wrong GT: different image.
+    'w (24).png',      # Wrong GT: different image.
+    'net (6472).png',  # Wrong GT: the image and the GT have a different resolution.
+    'net (7190).png',  # Wrong GT: many boxes are not labelled.
+
+# Final number of samples
+After the cleaning, this is the number of samples for each partition of the dataset.
+
+Train - TODO samples
+Val - 1995 samples
+
+It is the number of images on the disk, the number of ['image'] entries in the JSON
+annotation file (names in the annotation correspond to the names of the files), and
+the number of images that are referenced from the GT labels. Everything should be in
+synch.
