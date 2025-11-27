@@ -22,7 +22,8 @@ import csv
 from torchmetrics import JaccardIndex
 
 import gc
-import sys
+from pathlib import Path
+import shutil
 
 
 def upsample(masks, target_side=800):
@@ -33,6 +34,7 @@ def upsample(masks, target_side=800):
     target_size = (int(in_l * scale_factor), int(in_w * scale_factor))
     upsampled = F.interpolate(masks.float().unsqueeze(1), size=target_size, mode='nearest').squeeze(1).bool()
     return upsampled, in_w, in_l
+
 
 def downsample(masks, original_w, original_l):
     target_size = (original_l, original_w)
@@ -142,8 +144,18 @@ class MaskClassificationInstance(LightningModule):
         batch_idx=None,
         log_prefix=None,
     ):
+
+        # Enable the saving of segmentation images.
+        # TODO !!! MAKE SURE THE IMAGE SCALING IS SET TO [1, 1], WHEN RUNNING FOR VISUALIZATIONS !!!
+        save_visualizations = False  # MAKE SURE YOU SET THE OUTPUT FOLDER CORRECTLY, WHEN YOU ENABLE THIS.
         root_output_folder = '/workspace/data/EOMT/Output/'
-        output_folder = root_output_folder + 'Temporary/'
+        output_folder = root_output_folder + 'val_run2_on_train/'
+        if batch_idx == 0 and save_visualizations:
+            # Make sure output folder exists and is empty.
+            folder_path = Path(output_folder)
+            if folder_path.exists():
+                shutil.rmtree(folder_path)
+            folder_path.mkdir(exist_ok=True, parents=True)
 
         imgs, targets = batch
 
@@ -203,9 +215,6 @@ class MaskClassificationInstance(LightningModule):
             targets_[0]['masks'], _, _,  = upsample(targets_[0]['masks'])
             self.update_metrics_instance(preds, targets_, i)  # The original code did not have the underscore, but it seems that COCO uses the "iscrowd" version of the filed.
 
-        # Enable this line if you want to save visualizations.
-        # TODO !!! MAKE SURE THE IMAGE SCALING IS SET TO [1, 1], WHEN RUNNING FOR VISUALIZATIONS !!!
-        save_visualizations = True  # MAKE SURE YOU SET THE OUTPUT FOLDER CORRECTLY, WHEN YOU ENABLE THIS.
         if save_visualizations:
             # Downsample the predictions and the targets to the original image size.
             p_masks = downsample(preds[0]['masks'], in_w, in_l)
@@ -214,25 +223,37 @@ class MaskClassificationInstance(LightningModule):
                                                  p_masks,
                                                  imgs[0],
                                                  batch_idx,
-                                                 targets_[0],
                                                  t_masks,
                                                  output_folder=output_folder,  # MAKE SURE YOU SET THIS CORRECTLY.
                                                  image_path = targets[0].get('image_path', None),
-                                                 score_thresh=0.8)
+                                                 score_thresh=0.8)  # TODO: What value would be good?
         # Release memory.
         del imgs, targets, transformed_imgs, mask_logits_per_layer, class_logits_per_layer, mask_logits, preds, targets_, scores, labels, topk_indices, topk_scores, masks, mask_scores, p_masks, t_masks
         gc.collect()
         torch.cuda.empty_cache()
 
-    def visualize_instance_segmentation(self, preds, p_masks,image, batch_idx, targets, t_masks, output_folder, image_path, score_thresh=0.8):
+    def visualize_instance_segmentation(self, preds, p_masks, image, batch_idx, t_masks, output_folder, image_path, score_thresh=0.8):
         '''Todo: Add docstring.'''
         with torch.no_grad():
             metric = JaccardIndex(task='binary')
 
-            #################################################
-            # COMPUTE THE COLOR IMAGE WITH SEGMENT OVERLAYS #
-            #################################################
-            masks = p_masks  # preds["masks"].squeeze(1)  # shape [N, H, W]
+
+            # Variable names
+            #################
+            # overlaid_detection_image: input image with blended segment overlays.
+            # crisp_detection_image: image with crisp segments, used for IoU computation.
+            # overlaid_gt_image: GT image with blended segment overlays.
+            # crisp_gt_image: GT image with crisp segments, used for IoU computation.
+
+
+            ##################################################
+            # COMPUTE THE COLOR IMAGE WITH SEGMENT OVERLAYS, #
+            # AND THE IMAGE WITH CRISP DETECTION SEGMENTS.   #
+            ##################################################
+            # Segments are overlaid on the color image with alpha blending.
+            alpha_color_image = 0.4  # blending factor, 0.0 = no overlay, 1.0 = full overlay.
+
+            masks = p_masks
             labels = preds["labels"]
             scores = preds["scores"]
 
@@ -240,11 +261,14 @@ class MaskClassificationInstance(LightningModule):
             keep = scores > score_thresh
             masks, labels, scores = masks[keep], labels[keep], scores[keep]
 
-            # Create a color visualization
+            # This is a copy of the input image, on which segments will be overlaid.
             if isinstance(image, torch.Tensor):
-                color_img = image.permute(1, 2, 0).cpu().numpy()
+                overlaid_detection_image = image.permute(1, 2, 0).cpu().numpy()
             else:
-                color_img = np.array(image)
+                overlaid_detection_image = np.array(image)
+
+            # This image is used to compute the IoU with the GT.
+            crisp_detection_image = np.zeros(overlaid_detection_image.shape)
 
             if len(masks) > 0:
                 n_detections = masks.shape[0]
@@ -257,24 +281,28 @@ class MaskClassificationInstance(LightningModule):
                 num_instances = len(masks)
                 colors = list(np.random.permutation(generate_bgr_colors(num_instances)))
 
-
-                # Alpha blending
-                alpha = 0.5  # blending factor, 0.0 = no overlay, 1.0 = full overlay
-
-                combined_det_image = np.zeros(color_img.shape)
                 for i in range(num_instances):
                     mask = masks[i].cpu().numpy() > 0.5
-                    color = np.array(colors[i])
-                    # Alpha blend only where mask is True
-                    color_img[mask] = (1 - alpha) * color_img[mask] + alpha * color
-                    combined_det_image[mask] = [0.0, 1.0, 0.0]
+                    color = np.array(colors[i % len(colors)])
+                    # Alpha blend only where mask is True.
+                    overlaid_detection_image[mask] = (1 - alpha_color_image) * overlaid_detection_image[mask] + alpha_color_image * color
+                    # Add the segment to the crisp image.
+                    crisp_detection_image[mask] = [0.0, 1.0, 0.0]
             else:
-                combined_det_image = color_img
+                crisp_detection_image = overlaid_detection_image
                 n_detections = 0
+                colors = list(np.random.permutation(generate_bgr_colors(1)))
+
             #################################################
-            # COMPUTE THE GT IMAGE, BLACK WITH BOX SEGMENTS #
+            # COMPUTE THE GT IMAGE, WITH BLENDED OVERLAYS,  #
+            # AND THE IMAGE WITH CRISP GT SEGMENTS.         #
             #################################################
-            gt_image = np.zeros(color_img.shape)
+            # These start out as black images.
+            crisp_gt_image = np.zeros(overlaid_detection_image.shape)
+            overlaid_gt_image = np.zeros(overlaid_detection_image.shape)
+            alpha_gt_image = 0.7  # blending factor, 0.0 = no overlay, 1.0 = full overlay.
+
+
             gt_masks = t_masks  # targets['masks']
             if gt_masks.dim() == 3:    # sometimes it's [1, H, W]
                 gt_masks = gt_masks.squeeze(0)
@@ -282,46 +310,54 @@ class MaskClassificationInstance(LightningModule):
             try:
                 if len(gt_masks.shape) == 2:
                     n_gt_masks = 1
-                    gt_image[gt_masks] = [0.0, 1.0, 0.0]
+                    colors = list(np.random.permutation(generate_bgr_colors(1)))
+                    crisp_gt_image[gt_masks] = [0.0, 1.0, 0.0]
+                    color = np.array(colors[0])
+                    overlaid_gt_image[gt_masks] = (1 - alpha_gt_image) * overlaid_gt_image[gt_masks] + alpha_gt_image * color
                 else:
                     n_gt_masks = gt_masks.shape[0]
+                    colors = list(np.random.permutation(generate_bgr_colors(n_gt_masks)))
                     for index, current_mask in enumerate(gt_masks):
-                        gt_image[current_mask] = [0.0, 1.0, 0.0]
+                        crisp_gt_image[current_mask] = [0, 1, 0]
+                        # Alpha blend only where mask is True.
+                        color = np.array(colors[index % len(colors)])
+                        overlaid_gt_image[current_mask] = (1 - alpha_gt_image) * overlaid_gt_image[current_mask] + alpha_gt_image * color
+
             except Exception:
                 print(f'ERROR: GT image could not be computed for batch {batch_idx}!')
-                gt_image = np.zeros(color_img.shape)
+                crisp_gt_image = np.zeros(overlaid_detection_image.shape)
                 n_gt_masks = 0
 
-            fig, axes = plt.subplots(1, 2, figsize=(20, 10))
-            axes[0].imshow(color_img)
-            # axes[0].imshow(combined_det_image)
+            fig, axes = plt.subplots(1, 2, figsize=(16, 8))
+            axes[0].imshow(overlaid_detection_image)
             axes[0].set_title("Detections")
-            axes[1].imshow(gt_image)
+            axes[1].imshow(overlaid_gt_image/255.0)
             axes[1].set_title("GT")
 
             if len(masks) > 0:
                 iou = metric(
-                    torch.asarray(combined_det_image[:,:,1]),
-                    torch.asarray(gt_image[:,:,1]))
+                    torch.asarray(crisp_detection_image[:,:,1]),
+                    torch.asarray(crisp_gt_image[:,:,1]))
             else:
                 iou = torch.tensor(0.0)
             # print(f'BatchIndex {batch_idx} IoU {iou.item()}')
 
             with open(f'{output_folder}/iou_log.csv', 'a', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([batch_idx, image_path, iou.item(), n_detections, n_gt_masks, n_detections - n_gt_masks])
-            fig.suptitle(f"SemSeg IoU = {iou.item()}", fontsize=24)
+                writer.writerow([f"{batch_idx:05d}", image_path, f"{iou.item():0.2f}", n_detections, n_gt_masks, n_detections - n_gt_masks])
+            fig.suptitle(f"SemSeg IoU = {iou.item():0.2f}", fontsize=24)
 
             for ax in axes:
                 ax.axis("off")
             plt.tight_layout()
-            plt.savefig(f"{output_folder}/{batch_idx:04d}.jpg")
+            plt.savefig(f"{output_folder}/{batch_idx:05d}.jpg")
             plt.close()
             plt.close(fig)
             del fig
             torch.cuda.empty_cache()
-            del masks, labels, scores, gt_masks
-            del color_img, inst_map, combined_det_image, gt_image
+            del overlaid_detection_image, crisp_detection_image, labels, scores, gt_masks, crisp_gt_image
+            if len(masks) > 0:
+                del inst_map, masks
 
     def on_validation_epoch_end(self):
         self._on_eval_epoch_end_instance("val")

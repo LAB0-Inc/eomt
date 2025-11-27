@@ -170,7 +170,13 @@ class Dataset(torch.utils.data.Dataset):
                 self.targets_instance.append(target_instance_filename)
 
     def __getitem__(self, index: int):
+        # Debug code.
         # index = 1206  # In case you want to test on a specific sample.
+
+        # Debug code.
+        # Make it work on a list of samples.
+        # indices = [1206, 1258, 1577,1814, 2219, 2597, 2599, 2721, 2790, 2808, 2833, 2939, 3236, 3242, 3312, 3683, 3954, 4735, 5201, 5638, 5720]
+        # index = indices[index]
         try:
             img_zip, target_zip, target_instance_zip = self._load_zips()
             # print(self.imgs[index])

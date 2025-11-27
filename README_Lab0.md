@@ -55,6 +55,17 @@ The `inference.py` script can run inference on a single image or on the full val
 
 # Validation
 The script is `validate_SCD.sh`.
+The dataloader, `dataset/coco_instance.py`, applies a scaling to the images before feeding them to the segmentor. I think setting the scale range to (1, 1) before running a validation makes sense: `scale_range=(1.0, 1.0)`.
+
+By default, the validation process does not save the segmentation images. If you want to save them, you need to set `save_visualizations = True` in `training/mask_classification_instance.py`. You should also select a new output folder, to avoid overwriting existing data.
+When the images are saved, the `iou_log.txt` file is saved in the same folder. It contains the original file name of the input image, the value of the Semantic Segmentation IoU (so it's about the area on the image, not single segments) between the GT and the estimates, the number of segments in the estimate, that in the GT, and the difference between them.
+It is possible that saving the images only works with a batch size of 1.
+
+In case you want to only save the images, without computing the validation statistics, you can comment out this line in `mask_classification_instance.py`: `self.update_metrics_instance(preds, targets_, i)`.
+
+In case you want to run the validation on the training set (it takes ~2h30), you should change the definition of the validation set in `datasets/dataset.py` to be the same as the training set.
+
+In case you want to run the validation on a specific sample (for debug purposes), you can inject the index of the sample in `datasets/dataset.py`, so that it would repeatedly work on the same sample (or list of samples).
 
 # Converting to TensorRT
 
