@@ -149,7 +149,7 @@ class MaskClassificationInstance(LightningModule):
         # TODO !!! MAKE SURE THE IMAGE SCALING IS SET TO [1, 1], WHEN RUNNING FOR VISUALIZATIONS !!!
         save_visualizations = False  # MAKE SURE YOU SET THE OUTPUT FOLDER CORRECTLY, WHEN YOU ENABLE THIS.
         root_output_folder = '/workspace/data/EOMT/Output/'
-        output_folder = root_output_folder + 'val_run2_on_train/'
+        output_folder = root_output_folder + 'val_run2_on_202408_val/'
         if batch_idx == 0 and save_visualizations:
             # Make sure output folder exists and is empty.
             folder_path = Path(output_folder)
@@ -235,7 +235,7 @@ class MaskClassificationInstance(LightningModule):
         torch.cuda.empty_cache()
 
     def visualize_instance_segmentation(self, preds, p_masks, image, batch_idx, t_masks, output_folder, image_path, score_thresh=0.8):
-        '''Todo: Add docstring.'''
+        '''Saves images with the segmentation (and the GT) to a folder, as well as the iou_log.csv file.'''
         with torch.no_grad():
             metric = JaccardIndex(task='binary')
 
