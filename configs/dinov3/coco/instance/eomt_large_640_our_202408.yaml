@@ -1,0 +1,42 @@
+trainer:
+  max_epochs: 70  # We plan to run 50 epochs, but we set this higher so that
+                  # we can prolong training if we see that the model is still improving.
+  check_val_every_n_epoch: 1
+  logger:
+    class_path: lightning.pytorch.loggers.wandb.WandbLogger
+    init_args:
+      resume: allow
+      project: "eomt"
+      name: "large_640_dinov3"
+model:
+  class_path: training.mask_classification_instance.MaskClassificationInstance
+  init_args:
+    # The number of steps is the number of times gradient descent is applied.
+    # For one epoch, n_steps = training_samples / (batch_size * accumulation_steps).
+    # 14106 / (4 * 4) = 882 steps per epoch.
+    # What the progress bar reports, instead, is the number of batches:
+    # 14106 / 4 = 3526 batches per epoch.
+
+    # 50 epochs can be run from Friday evenint to Monday morning on the 4070.
+    # Expected number of steps = steps_per_epoch * n_epochs
+    #                          = 882 * 50 = 44100 steps.
+    # We design the schedule so that the annealing finishes at 90% of total steps.
+    attn_mask_annealing_enabled: True
+    # Computed so that it ends at 90% of total steps.
+    attn_mask_annealing_start_steps: [4500, 11250, 22500, 33750]
+    attn_mask_annealing_end_steps:   [11250, 22500, 33750, 40500]
+    lr: 2e-4  # 5e-5  #
+    llrd_l2_enabled: False
+    # Warm up steps for the backbone (5% of steps) and for the head (10% of steps).
+    warmup_steps: [2250, 3375]
+    delta_weights: True
+    network:
+      class_path: models.eomt.EoMT
+      init_args:
+        num_q: 200  # Maximum number of detections per image.
+        encoder:
+          class_path: models.vit.ViT
+          init_args:
+            backbone_name: facebook/dinov3-vitl16-pretrain-lvd1689m
+data:
+  class_path: datasets.coco_instance_our_202408.COCOInstance  # Our data, validation set of 2024 08
