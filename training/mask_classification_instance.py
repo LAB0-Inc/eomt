@@ -228,7 +228,9 @@ class MaskClassificationInstance(LightningModule):
                                                  image_path = targets[0].get('image_path', None),
                                                  score_thresh=0.8)  # TODO: What value would be good?
         # Release memory.
-        del imgs, targets, transformed_imgs, mask_logits_per_layer, class_logits_per_layer, mask_logits, preds, targets_, scores, labels, topk_indices, topk_scores, masks, mask_scores, p_masks, t_masks
+        del imgs, targets, transformed_imgs, mask_logits_per_layer, class_logits_per_layer, mask_logits, preds, targets_, scores, labels, topk_indices, topk_scores, masks, mask_scores
+        if save_visualizations:
+            del p_masks, t_masks
         gc.collect()
         torch.cuda.empty_cache()
 
