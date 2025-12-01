@@ -33,7 +33,7 @@ class COCOInstance(LightningDataModule):
         img_size: tuple[int, int] = (640, 640),
         num_classes: int = 2,
         color_jitter_enabled=False,
-        scale_range=(1.0, 1.0),
+        scale_range=(0.1, 2.0),
         check_empty_targets=True,
     ) -> None:
         super().__init__(
