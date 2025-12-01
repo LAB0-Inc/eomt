@@ -26,7 +26,7 @@ from pathlib import Path
 import shutil
 
 
-def upsample(masks, target_side=800):
+def upsample(masks, target_side=2000):
     in_w = masks.shape[-1]
     in_l = masks.shape[-2]
     min_side = min(in_w, in_l)
@@ -138,6 +138,7 @@ class MaskClassificationInstance(LightningModule):
 
         self.init_metrics_instance(self.network.num_blocks + 1 if self.network.masked_attn_enabled else 1)
 
+    @torch.no_grad()
     def eval_step(
         self,
         batch,
@@ -163,9 +164,17 @@ class MaskClassificationInstance(LightningModule):
         transformed_imgs = self.resize_and_pad_imgs_instance_panoptic(imgs)
         mask_logits_per_layer, class_logits_per_layer = self(transformed_imgs)
 
+        # Make sure we don't keep stuff in memory that is going to make us go OOM.
+        mask_logits_per_layer_cpu = [tensor.detach().cpu() for tensor in mask_logits_per_layer]
+        class_logits_per_layer_cpu = [tensor.detach().cpu() for tensor in class_logits_per_layer]
+
         for i, (mask_logits, class_logits) in enumerate(
-            list(zip(mask_logits_per_layer, class_logits_per_layer))
+            list(zip(mask_logits_per_layer_cpu, class_logits_per_layer_cpu))
         ):
+            # THIS MIGHT NOT BE NEEDED. Ensure we're working on CPU.
+            mask_logits = mask_logits.cpu() if mask_logits.is_cuda else mask_logits
+            class_logits = class_logits.cpu() if class_logits.is_cuda else class_logits
+
             mask_logits = F.interpolate(mask_logits, self.img_size, mode="bilinear")
             mask_logits = self.revert_resize_and_pad_logits_instance_panoptic(
                 mask_logits, img_sizes
@@ -175,12 +184,11 @@ class MaskClassificationInstance(LightningModule):
             for j in range(len(mask_logits)):
                 scores = class_logits[j].softmax(dim=-1)[:, :-1]
                 labels = (
-                    torch.arange(scores.shape[-1], device=self.device)
+                    torch.arange(scores.shape[-1], device='cpu')  # ← Explicit CPU
                     .unsqueeze(0)
                     .repeat(scores.shape[0], 1)
                     .flatten(0, 1)
                 )
-
                 topk_scores, topk_indices = scores.flatten(0, 1).topk(
                     self.eval_top_k_instances, sorted=False
                 )
