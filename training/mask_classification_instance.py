@@ -24,6 +24,8 @@ from torchmetrics import JaccardIndex
 import gc
 from pathlib import Path
 import shutil
+from torchvision.ops import box_iou
+from torchmetrics.detection import MeanAveragePrecision
 
 
 def upsample(masks, target_side=800):
@@ -149,7 +151,7 @@ class MaskClassificationInstance(LightningModule):
         # TODO !!! MAKE SURE THE IMAGE SCALING IS SET TO [1, 1], WHEN RUNNING FOR VISUALIZATIONS !!!
         save_visualizations = False  # MAKE SURE YOU SET THE OUTPUT FOLDER CORRECTLY, WHEN YOU ENABLE THIS.
         root_output_folder = '/workspace/data/EOMT/Output/'
-        output_folder = root_output_folder + 'val_run2_on_202408_val/'
+        output_folder = root_output_folder + 'val_run5_Oregon_epoch_67_on_202408_val/'
         if batch_idx == 0 and save_visualizations:
             # Make sure output folder exists and is empty.
             folder_path = Path(output_folder)
@@ -215,6 +217,10 @@ class MaskClassificationInstance(LightningModule):
             targets_[0]['masks'], _, _,  = upsample(targets_[0]['masks'])
             self.update_metrics_instance(preds, targets_, i)  # The original code did not have the underscore, but it seems that COCO uses the "iscrowd" version of the filed.
 
+
+        # It would be cool if we could extract information on True Positives, False Positives and Missed Detections based on one IoU threshold,
+        # but it does not look like we can get that from the metrics object.
+
         if save_visualizations:
             # Downsample the predictions and the targets to the original image size.
             p_masks = downsample(preds[0]['masks'], in_w, in_l)
@@ -233,6 +239,7 @@ class MaskClassificationInstance(LightningModule):
             del p_masks, t_masks
         gc.collect()
         torch.cuda.empty_cache()
+
 
     def visualize_instance_segmentation(self, preds, p_masks, image, batch_idx, t_masks, output_folder, image_path, score_thresh=0.8):
         '''Saves images with the segmentation (and the GT) to a folder, as well as the iou_log.csv file.'''
@@ -253,7 +260,7 @@ class MaskClassificationInstance(LightningModule):
             # AND THE IMAGE WITH CRISP DETECTION SEGMENTS.   #
             ##################################################
             # Segments are overlaid on the color image with alpha blending.
-            alpha_color_image = 0.4  # blending factor, 0.0 = no overlay, 1.0 = full overlay.
+            alpha_color_image = 0.1  # blending factor, 0.0 = no overlay, 1.0 = full overlay.
 
             masks = p_masks
             labels = preds["labels"]
@@ -288,8 +295,39 @@ class MaskClassificationInstance(LightningModule):
                     color = np.array(colors[i % len(colors)])
                     # Alpha blend only where mask is True.
                     overlaid_detection_image[mask] = (1 - alpha_color_image) * overlaid_detection_image[mask] + alpha_color_image * color
-                    # Add the segment to the crisp image.
-                    crisp_detection_image[mask] = [0.0, 1.0, 0.0]
+
+                    # Draw the contour of the segment (no transparency for this).
+                    mask_uint8 = mask.astype(np.uint8) * 255
+                    contours, _ = cv2.findContours(mask_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    cv2.drawContours(overlaid_detection_image, contours, -1, color.tolist(), thickness=1)
+
+                    moments = cv2.moments(mask_uint8)
+                    if moments["m00"] != 0:  # Avoid division by zero
+                        cx = int(moments["m10"] / moments["m00"])
+                        cy = int(moments["m01"] / moments["m00"])
+
+                        # Format the confidence score
+                        text = f"{scores[i]:.1f}"
+
+                        score_font_scale = 0.5
+                        # Get text size to center it properly
+                        font = cv2.FONT_HERSHEY_SIMPLEX
+                        thickness = 2
+                        (text_width, text_height), baseline = cv2.getTextSize(text, font, score_font_scale, thickness)
+
+                        # Calculate position to center the text
+                        text_x = cx - text_width // 2
+                        text_y = cy + text_height // 2
+
+                        # Draw black outline (thickness=3 for outline effect)
+                        cv2.putText(overlaid_detection_image, text, (text_x, text_y),
+                                    cv2.FONT_HERSHEY_SIMPLEX, score_font_scale, (0, 0, 0), thickness=5)
+
+                        # Draw white text on top
+                        cv2.putText(overlaid_detection_image, text, (text_x, text_y),
+                        cv2.FONT_HERSHEY_SIMPLEX, score_font_scale, (255, 255, 255), thickness=2)
+                        # Add the segment to the crisp image.
+                        crisp_detection_image[mask] = [0.0, 1.0, 0.0]
             else:
                 crisp_detection_image = overlaid_detection_image
                 n_detections = 0
@@ -330,7 +368,7 @@ class MaskClassificationInstance(LightningModule):
                 crisp_gt_image = np.zeros(overlaid_detection_image.shape)
                 n_gt_masks = 0
 
-            fig, axes = plt.subplots(1, 2, figsize=(16, 8))
+            fig, axes = plt.subplots(1, 2, figsize=(20, 10))
             axes[0].imshow(overlaid_detection_image)
             axes[0].set_title("Detections")
             axes[1].imshow(overlaid_gt_image/255.0)

@@ -3,10 +3,10 @@
 Convert LabelMe JSON annotations (one per image) to a single COCO format JSON file.
 
 Usage:
-    python labelme_to_coco.py --annotations-zip annotations.zip --images-zip images.zip --output coco_annotations.json
+    python convert_LabelMe_to_COCO_annotations.py --annotations-zip annotations.zip --images-zip images.zip --output coco_annotations.json
 
     Or if annotations are in a folder within the zip:
-    python labelme_to_coco.py --annotations-zip annotations.zip --annotations-path ./annotations_labelme_validation --output coco_annotations.json
+    python convert_LabelMe_to_COCO_annotations.py --annotations-zip annotations.zip --annotations-path ./annotations_labelme_validation --output coco_annotations.json
 """
 
 import json

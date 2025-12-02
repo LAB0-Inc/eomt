@@ -4,8 +4,10 @@ import numpy as np
 
 # input_csv_path = '/workspace/data/EOMT/Output/val_run2_on_train_GOOD/iou_log.csv'
 # input_csv_path = '/workspace/data/EOMT/Output/val_run2_on_val_GOOD/iou_log.csv'
+# input_csv_path = '/workspace/data/EOMT/Output/val_run2_on_202408_val/iou_log.csv'
 
-input_csv_path = '/workspace/data/EOMT/Output/val_run2_on_202408_val/iou_log.csv'
+# This training reached the point where all attention weights are zero.
+input_csv_path = '/workspace/data/EOMT/Output/val_run5_Oregon_on_202408_val/iou_log.csv'
 
 data = []
 with open(input_csv_path, 'r') as f:

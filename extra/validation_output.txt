@@ -90,3 +90,42 @@ mAP All: 87.0 | mAP Small: 4.0 | mAP Medium: 55.8 | mAP Large: 92.8
 │ metrics/val_ap_small_all_block_-3  │        0.018967613577842712        │
 │ metrics/val_ap_small_all_block_-4  │        0.005077062640339136        │
 └────────────────────────────────────┴────────────────────────────────────┘
+
+Run5_Oregon_epoch_59_on_202408:
+mAP All: 88.2 | mAP Small: 34.8 | mAP Medium: 81.3 | mAP Large: 92.9
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃          Validate metric           ┃            DataLoader 0            ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│                mAP                 │         0.846635639667511          │
+│       metrics/val_ap_50_all        │         0.9875633716583252         │
+│   metrics/val_ap_50_all_block_-1   │         0.9855057001113892         │
+│   metrics/val_ap_50_all_block_-2   │         0.971296489238739          │
+│   metrics/val_ap_50_all_block_-3   │         0.9670653343200684         │
+│   metrics/val_ap_50_all_block_-4   │         0.8685117959976196         │
+│       metrics/val_ap_75_all        │         0.9679457545280457         │
+│   metrics/val_ap_75_all_block_-1   │         0.9664878249168396         │
+│   metrics/val_ap_75_all_block_-2   │         0.9515075087547302         │
+│   metrics/val_ap_75_all_block_-3   │         0.942287266254425          │
+│   metrics/val_ap_75_all_block_-4   │         0.8277963995933533         │
+│         metrics/val_ap_all         │         0.8822391033172607         │
+│    metrics/val_ap_all_block_-1     │         0.882064700126648          │
+│    metrics/val_ap_all_block_-2     │         0.8679377436637878         │
+│    metrics/val_ap_all_block_-3     │         0.8570905327796936         │
+│    metrics/val_ap_all_block_-4     │         0.7438456416130066         │
+│      metrics/val_ap_large_all      │         0.9292089939117432         │
+│ metrics/val_ap_large_all_block_-1  │         0.9284412860870361         │
+│ metrics/val_ap_large_all_block_-2  │         0.9202849864959717         │
+│ metrics/val_ap_large_all_block_-3  │         0.9188522696495056         │
+│ metrics/val_ap_large_all_block_-4  │         0.8442646265029907         │
+│     metrics/val_ap_medium_all      │         0.8128130435943604         │
+│ metrics/val_ap_medium_all_block_-1 │          0.8135946393013           │
+│ metrics/val_ap_medium_all_block_-2 │         0.7949960827827454         │
+│ metrics/val_ap_medium_all_block_-3 │         0.7673997282981873         │
+│ metrics/val_ap_medium_all_block_-4 │         0.648881196975708          │
+│      metrics/val_ap_small_all      │        0.34796202182769775         │
+│ metrics/val_ap_small_all_block_-1  │         0.3483986556529999         │
+│ metrics/val_ap_small_all_block_-2  │         0.3227444887161255         │
+│ metrics/val_ap_small_all_block_-3  │         0.2808174192905426         │
+│ metrics/val_ap_small_all_block_-4  │        0.10097549110651016         │
+└────────────────────────────────────┴────────────────────────────────────┘
+
