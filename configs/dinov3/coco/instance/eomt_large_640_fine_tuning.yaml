@@ -1,0 +1,29 @@
+trainer:
+  max_epochs: 97  # = #initial_training_epochs + #fine_tuning_training_epochs.
+  check_val_every_n_epoch: 1
+  logger:
+    class_path: lightning.pytorch.loggers.wandb.WandbLogger
+    init_args:
+      resume: allow
+      project: "eomt"
+      name: "fine_tuning"
+model:
+  class_path: training.mask_classification_instance.MaskClassificationInstance
+  init_args:
+    attn_mask_annealing_enabled: False  #
+    lr: 2e-5  # 2e-4 during the training.
+    llrd_l2_enabled: False
+    # # Warm up steps for the backbone (5% of steps) and for the head (10% of steps).
+    # warmup_steps: [2250, 3375]
+    delta_weights: False
+    ckpt_path: /workspace/data/EOMT/Checkpoints/Run5_Oregon/epoch=067-mAP=0.83.ckpt
+    network:
+      class_path: models.eomt.EoMT
+      init_args:
+        num_q: 200  # Maximum number of detections per image.
+        encoder:
+          class_path: models.vit.ViT
+          init_args:
+            backbone_name: facebook/dinov3-vitl16-pretrain-lvd1689m
+data:
+  class_path: datasets.coco_instance_our_202408.COCOInstance  # Our data, validation set of 2024 08

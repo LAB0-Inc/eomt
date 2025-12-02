@@ -86,14 +86,13 @@ class COCOInstance(LightningDataModule):
             "only_annotations_json": True,
             "check_empty_targets": self.check_empty_targets,
         }
-        # TODO: Train dataset is set on validation data.
         self.train_dataset = Dataset(
             transforms=self.transforms,
             #
-            zip_path=Path(self.path, "validation_images.zip"),
-            img_folder_path_in_zip=Path("./validation_images/"),
-            target_zip_path=Path(self.path, "validation_annotations.zip"),
-            annotations_json_path_in_zip=Path("./validation_annotations/annotations.json"),
+            zip_path=Path(self.path, "training_images.zip"),
+            img_folder_path_in_zip=Path("./training_images/"),
+            target_zip_path=Path(self.path, "training_annotations.zip"),
+            annotations_json_path_in_zip=Path("./training_annotations/annotations.json"),
             **dataset_kwargs,
         )
         self.val_dataset = Dataset(
