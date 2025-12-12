@@ -4,17 +4,39 @@
 
 import fiftyone as fo
 import fiftyone.utils.labels as foul
+import numpy as np
 
-
-def delete_attribute(detections, attribute):
-    for det in detections.segmentations:
-        del(det[attribute])
-    return
 
 def change_gt_object_class(detections):
     for det in detections.detections:
         det.label = "box"
     return
+
+
+def compute_binary_iou(gt_mask, pred_mask):
+    """
+    Compute IoU for binary segmentation (one class + background).
+
+    Args:
+        gt_mask: Ground truth mask (H, W) - typically 0 for background, 255 for object
+        pred_mask: Prediction mask (H, W) - typically 0 for background, 255 for object
+
+    Returns:
+        iou: Intersection over Union score
+    """
+    # Binarize masks (in case values are 255 instead of 1)
+    gt_binary = gt_mask > 0
+    pred_binary = pred_mask > 0
+
+    # Compute intersection and union
+    intersection = np.sum(gt_binary & pred_binary)
+    union = np.sum(gt_binary | pred_binary)
+
+    # Compute IoU
+    iou = intersection / union if union > 0 else 0.0
+
+    return iou
+
 
 # 1. Create the dataset, load images and GT labels.
 dataset = fo.Dataset.from_dir(
@@ -25,6 +47,7 @@ dataset = fo.Dataset.from_dir(
     label_field="gt_with_bbs",
     name="FT1_3_on_val"  # Name of the dataset.
 )
+
 
 # 2. Load predictions.
 dataset.merge_samples(
@@ -37,12 +60,14 @@ dataset.merge_samples(
     )
 )
 
+
 # 3. Change class name for GT.
 for sample in dataset:
     change_gt_object_class(sample.gt_with_bbs)  # Set object type to "box".
     sample.save()
 
-# 4. Remove BBs from the visualization.
+
+# 4. Create labels without BBs for the visualization.
 #    This is done by transforming the type of detection to a segmentation. This discards the score of the detections and more.
 current_field = "gt_with_bbs"
 new_segmentation_field = "gt"
@@ -81,8 +106,15 @@ for sample in dataset:
     sample["F1"] = f1
     sample.save()
 
+# 7. Compute the Semantic Segmentation IoU for each image.
+for sample in dataset:
+    iou = compute_binary_iou(sample['gt']['mask'], sample['pred']['mask'])
+    sample['iou'] = iou
+    sample.save()
 
-# 7. Create labels for False Positives and Missed Detections (FN)
+
+
+# 8. Create labels for False Positives and Missed Detections (FN)
 for sample in dataset:
     fp_dets = [det for det in sample["pred_with_bbs"].detections if det.eval == "fp"]
     sample["FP_with_bbs"] = fo.Detections(detections=fp_dets)
@@ -93,7 +125,7 @@ for sample in dataset:
 
     sample.save()
 
-# 8. Create a version of FPs and FNs without BBs, for the visualization.
+# 9. Create a version of FPs and FNs without BBs, for the visualization.
 #    This is done by transforming the type of detection to a segmentation. This discards the score of the detections and more.
 current_field = "FP_with_bbs"
 new_segmentation_field = "FP"
@@ -108,11 +140,11 @@ foul.objects_to_segmentations(
     current_field,
     new_segmentation_field)
 
-# 9. Set up the app.
+# 10. Set up the app (it would be nice if I could set colors up, here).
 # This allows you to sort by other variables as well.
 sorted_view = dataset.sort_by("F1", reverse=True)
 
-# 10. Launch the app.
+# 11. Launch the app.
 # session = fo.launch_app(dataset)
 session = fo.launch_app(sorted_view)
 
