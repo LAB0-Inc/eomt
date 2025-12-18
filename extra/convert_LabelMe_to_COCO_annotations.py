@@ -17,11 +17,11 @@ from datetime import datetime
 
 
 def convert_labelme_to_coco(
-    annotations_zip_path,
-    images_zip_path=None,
+    annotations_zip_path='/workspace/data/Datasets/fine_tuning_2025_12_16/training_annotations_labelme_cleaned_up_stage_1.zip',
+    images_zip_path='/workspace/data/Datasets/fine_tuning_2025_12_16/training_images.zip',
     annotations_path_in_zip="./",
     images_path_in_zip="./",
-    output_json_path="coco_annotations.json",
+    output_json_path='/workspace/data/Datasets/fine_tuning_2025_12_16/coco_cleaned_up_stage_1.json',
     category_mapping=None,
 ):
     """
@@ -43,6 +43,7 @@ def convert_labelme_to_coco(
             "1": 1,
             "box": 1,
             "Box": 1,
+            "class_1": 1,
             0: 0,
             1: 1,
         }
@@ -134,7 +135,7 @@ def convert_labelme_to_coco(
                     for shape in labelme_data["shapes"]:
                         # Get label and map to category
                         label = shape.get("label", "0")
-                        if label != 'box':
+                        if label != 'box' and label != 'class_1':
                             print(f'Found interesting label: {label}')
 
                         # Try both string and int versions of label
@@ -159,13 +160,14 @@ def convert_labelme_to_coco(
                         # Convert to COCO segmentation format (flat list)
                         segmentation = []
                         for point in points:
-                            segmentation.extend([float(point[0]), float(point[1])])
+                            # Make sure the labels are fully inside the image.
+                            segmentation.extend([float(min(max(0, point[0]), width - 1)), float(min(max(0, point[1]), height - 1))])
 
                         # Calculate bounding box
                         x_coords = [p[0] for p in points]
                         y_coords = [p[1] for p in points]
-                        x_min, x_max = min(x_coords), max(x_coords)
-                        y_min, y_max = min(y_coords), max(y_coords)
+                        x_min, x_max = round(min(x_coords)), round(max(x_coords))
+                        y_min, y_max = round(min(y_coords)), round(max(y_coords))
                         bbox_width = x_max - x_min
                         bbox_height = y_max - y_min
 
@@ -176,7 +178,7 @@ def convert_labelme_to_coco(
                             "category_id": category_id,
                             "segmentation": [segmentation],
                             "area": bbox_width * bbox_height,
-                            "bbox": [x_min, y_min, bbox_width, bbox_height],
+                            "bbox": [(x_min), y_min, bbox_width, bbox_height],
                             "iscrowd": 0,
                         })
 
@@ -203,50 +205,52 @@ def convert_labelme_to_coco(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Convert LabelMe JSON annotations to COCO format"
-    )
-    parser.add_argument(
-        "--annotations-zip",
-        required=True,
-        help="Path to zip file containing LabelMe JSON annotations"
-    )
-    parser.add_argument(
-        "--images-zip",
-        help="Path to zip file containing images (optional, for getting dimensions)"
-    )
-    parser.add_argument(
-        "--annotations-path",
-        default="./",
-        help="Path within annotations zip where JSON files are located"
-    )
-    parser.add_argument(
-        "--images-path",
-        default="./",
-        help="Path within images zip where image files are located"
-    )
-    parser.add_argument(
-        "--output",
-        default="coco_annotations.json",
-        help="Output path for COCO format JSON file"
-    )
-    parser.add_argument(
-        "--category-mapping",
-        help='JSON string for category mapping, e.g., \'{"0": 0, "1": 1}\''
-    )
+    # parser = argparse.ArgumentParser(
+    #     description="Convert LabelMe JSON annotations to COCO format"
+    # )
+    # parser.add_argument(
+    #     "--annotations-zip",
+    #     required=True,
+    #     help="Path to zip file containing LabelMe JSON annotations"
+    # )
+    # parser.add_argument(
+    #     "--images-zip",
+    #     help="Path to zip file containing images (optional, for getting dimensions)"
+    # )
+    # parser.add_argument(
+    #     "--annotations-path",
+    #     default="./",
+    #     help="Path within annotations zip where JSON files are located"
+    # )
+    # parser.add_argument(
+    #     "--images-path",
+    #     default="./",
+    #     help="Path within images zip where image files are located"
+    # )
+    # parser.add_argument(
+    #     "--output",
+    #     default="coco_annotations.json",
+    #     help="Output path for COCO format JSON file"
+    # )
+    # parser.add_argument(
+    #     "--category-mapping",
+    #     help='JSON string for category mapping, e.g., \'{"0": 0, "1": 1}\''
+    # )
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
 
-    # Parse category mapping if provided
-    category_mapping = None
-    if args.category_mapping:
-        category_mapping = json.loads(args.category_mapping)
+    # # Parse category mapping if provided
+    # category_mapping = None
+    # if args.category_mapping:
+    #     category_mapping = json.loads(args.category_mapping)
 
-    convert_labelme_to_coco(
-        annotations_zip_path=args.annotations_zip,
-        images_zip_path=args.images_zip,
-        annotations_path_in_zip=args.annotations_path,
-        images_path_in_zip=args.images_path,
-        output_json_path=args.output,
-        category_mapping=category_mapping,
-    )
+    # convert_labelme_to_coco(
+    #     annotations_zip_path=args.annotations_zip,
+    #     images_zip_path=args.images_zip,
+    #     annotations_path_in_zip=args.annotations_path,
+    #     images_path_in_zip=args.images_path,
+    #     output_json_path=args.output,
+    #     category_mapping=category_mapping,
+    # )
+
+    convert_labelme_to_coco()

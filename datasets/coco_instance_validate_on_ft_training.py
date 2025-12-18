@@ -90,17 +90,17 @@ class COCOInstance(LightningDataModule):
             transforms=self.transforms,
 
             # We used this file for validation, we do not need the training data.
-            zip_path=Path(self.path, "validation_images.zip"),
-            img_folder_path_in_zip=Path("./validation_images/"),
-            target_zip_path=Path(self.path, "validation_annotations.zip"),
-            annotations_json_path_in_zip=Path("./validation_annotations/annotations.json"),
+            zip_path=Path(self.path, "training_images.zip"),
+            img_folder_path_in_zip=Path("./training_images/"),
+            target_zip_path=Path(self.path, "training_annotations.zip"),
+            annotations_json_path_in_zip=Path("./training_annotations/annotations.json"),
             **dataset_kwargs,
         )
         self.val_dataset = Dataset(
-            zip_path=Path(self.path, "validation_images.zip"),
-            img_folder_path_in_zip=Path("./validation_images/"),
-            target_zip_path=Path(self.path, "validation_annotations.zip"),
-            annotations_json_path_in_zip=Path("./validation_annotations/annotations.json"),
+            zip_path=Path(self.path, "training_images.zip"),
+            img_folder_path_in_zip=Path("./training_images/"),
+            target_zip_path=Path(self.path, "training_annotations.zip"),
+            annotations_json_path_in_zip=Path("./training_annotations/annotations.json"),
             **dataset_kwargs,
         )
 
