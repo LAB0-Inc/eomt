@@ -161,7 +161,9 @@ def convert_labelme_to_coco(
                         segmentation = []
                         for point in points:
                             # Make sure the labels are fully inside the image.
-                            segmentation.extend([float(min(max(0, point[0]), width - 1)), float(min(max(0, point[1]), height - 1))])
+                            point[0] = min(max(0, point[0]), width - 1)
+                            point[1] = min(max(0, point[1]), height - 1)
+                            segmentation.extend([float(point[0]), float(point[1])])
 
                         # Calculate bounding box
                         x_coords = [p[0] for p in points]
@@ -178,7 +180,7 @@ def convert_labelme_to_coco(
                             "category_id": category_id,
                             "segmentation": [segmentation],
                             "area": bbox_width * bbox_height,
-                            "bbox": [(x_min), y_min, bbox_width, bbox_height],
+                            "bbox": [x_min, y_min, bbox_width, bbox_height],
                             "iscrowd": 0,
                         })
 
