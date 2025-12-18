@@ -171,7 +171,7 @@ class Dataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index: int):
         # Debug code.
-        # index = 1206  # In case you want to test on a specific sample.
+        # index = 231  # In case you want to test on a specific sample.
 
         # Debug code.
         # Make it work on a list of samples.
@@ -225,8 +225,14 @@ class Dataset(torch.utils.data.Dataset):
                 img, target = self.transforms(img, target)
 
             target["image_path"] = self.imgs[index]  # For debugging purposes.
+            target["index"] = index  # Used when saving output in COCO format.
+            target["width"] = img.shape[-1]  # Used when saving output in COCO format.
+            target["height"] = img.shape[-2]  # Used when saving output in COCO format.
+
+
         except Exception as e:
             print(f"Error loading sample #{index}, \"{self.imgs[index]}\", using sample #100 instead.")
+            print(f'Exception: {e}')
             # HACK THAT ALLOWS THE DATASET TO CONTINUE LOADING EVEN IF A SAMPLE IS CORRUPTED.
             index = 100
             img_zip, target_zip, target_instance_zip = self._load_zips()
@@ -275,6 +281,9 @@ class Dataset(torch.utils.data.Dataset):
                 img, target = self.transforms(img, target)
 
             target["image_path"] = self.imgs[index]  # For debugging purposes.
+            target["index"] = index  # Used when saving output in COCO format.
+            target["width"] = img.shape[-1]  # Used when saving output in COCO format.
+            target["height"] = img.shape[-2]  # Used when saving output in COCO format.
 
         return img, target
 
