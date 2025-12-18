@@ -7,7 +7,10 @@ import numpy as np
 # input_csv_path = '/workspace/data/EOMT/Output/val_run2_on_202408_val/iou_log.csv'
 
 # This training reached the point where all attention weights are zero.
-input_csv_path = '/workspace/data/EOMT/Output/val_run5_Oregon_on_202408_val/iou_log.csv'
+# input_csv_path = '/workspace/data/EOMT/Output/val_run5_Oregon_epoch_67_on_202408_val/iou_log.csv'
+
+# This is Run 5 Oregon, fine-tuned.
+input_csv_path = '/workspace/data/EOMT/Output/val_FT_1_on_202408_val/iou_log.csv'
 
 data = []
 with open(input_csv_path, 'r') as f:
@@ -19,13 +22,14 @@ with open(input_csv_path, 'r') as f:
         iou = float(row[2])
         n_detections = int(row[3])
         n_gt_masks = int(row[4])
-        data.append((batch_idx, image_path, iou, n_detections, n_gt_masks))
+        data.append((batch_idx, image_path, iou, n_detections, n_gt_masks, abs(n_detections-n_gt_masks)))
 
 
 # Count samples for IoU ranges
-iou_thresholds = [0.0, 0.2, 0.4, 0.5, 0.7, 0.8, 0.9, 0.95, 1.0]
+# iou_thresholds = [0.0, 0.2, 0.4, 0.5, 0.7, 0.8, 0.9, 0.95, 1.0]
+iou_thresholds = [0.0, 0.8, 0.85, 0.9, 0.925, 0.95, 0.975, 1.0]
 counts = {f"{iou_thresholds[i]}-{iou_thresholds[i+1]}": 0 for i in range(len(iou_thresholds)-1)}
-for _, _, iou, _, _ in data:
+for _, _, iou, _, _, _ in data:
     for i in range(len(iou_thresholds)-1):
         if iou_thresholds[i] <= iou < iou_thresholds[i+1]:
             counts[f"{iou_thresholds[i]}-{iou_thresholds[i+1]}"] += 1
@@ -35,15 +39,26 @@ print("IoU Range Counts:")
 for range_key, count in counts.items():
     print(f"  {range_key}: {count}")
 
-# Sort by IoU
-data.sort(key=lambda x: x[2])
+# # Sort by IoU
+# data.sort(key=lambda x: x[2])
 
-# Print samples with IoU < threshold.
-threshold = 0.95
+# # Print samples with IoU < threshold.
+# threshold = 0.95
+# for index, entry in enumerate(data):
+#     if entry[2] < threshold:
+#         print(f"{index}: {entry}")
+#     else:
+#         break  # The list is sorted, so we can stop here.
+
+# Sort by IoU
+data.sort(key=lambda x: x[5], reverse=True)
+
+# Print samples with num_segment_difference > 0.
+threshold = 0
 for index, entry in enumerate(data):
-    if entry[2] < threshold:
+    if entry[5] > threshold:
         print(f"{index}: {entry}")
     else:
         break  # The list is sorted, so we can stop here.
 
-pass
+
