@@ -26,6 +26,7 @@ from pathlib import Path
 import shutil
 from torchvision.ops import box_iou
 from torchmetrics.detection import MeanAveragePrecision
+from pycocotools import mask as mask_utils
 
 
 def upsample(masks, target_side=800):
@@ -151,7 +152,7 @@ class MaskClassificationInstance(LightningModule):
         # TODO !!! MAKE SURE THE IMAGE SCALING IS SET TO [1, 1], WHEN RUNNING FOR VISUALIZATIONS !!!
         save_visualizations = False  # MAKE SURE YOU SET THE OUTPUT FOLDER CORRECTLY, WHEN YOU ENABLE THIS.
         root_output_folder = '/workspace/data/EOMT/Output/'
-        output_folder = root_output_folder + 'val_run5_Oregon_epoch_67_on_202408_val/'
+        output_folder = root_output_folder + 'val_on_ft_training/'
         if batch_idx == 0 and save_visualizations:
             # Make sure output folder exists and is empty.
             folder_path = Path(output_folder)
@@ -225,6 +226,8 @@ class MaskClassificationInstance(LightningModule):
             # Downsample the predictions and the targets to the original image size.
             p_masks = downsample(preds[0]['masks'], in_w, in_l)
             t_masks = downsample(targets_[0]['masks'], in_w, in_l)
+            sample_index = targets[0].get('index', None)
+
             self.visualize_instance_segmentation(preds[0],
                                                  p_masks,
                                                  imgs[0],
@@ -232,6 +235,7 @@ class MaskClassificationInstance(LightningModule):
                                                  t_masks,
                                                  output_folder=output_folder,  # MAKE SURE YOU SET THIS CORRECTLY.
                                                  image_path = targets[0].get('image_path', None),
+                                                 sample_index = sample_index,
                                                  score_thresh=0.8)  # TODO: What value would be good?
         # Release memory.
         del imgs, targets, transformed_imgs, mask_logits_per_layer, class_logits_per_layer, mask_logits, preds, targets_, scores, labels, topk_indices, topk_scores, masks, mask_scores
@@ -240,8 +244,7 @@ class MaskClassificationInstance(LightningModule):
         gc.collect()
         torch.cuda.empty_cache()
 
-
-    def visualize_instance_segmentation(self, preds, p_masks, image, batch_idx, t_masks, output_folder, image_path, score_thresh=0.8):
+    def visualize_instance_segmentation(self, preds, p_masks, image, batch_idx, t_masks, output_folder, image_path, sample_index, score_thresh=0.8):
         '''Saves images with the segmentation (and the GT) to a folder, as well as the iou_log.csv file.'''
         with torch.no_grad():
             metric = JaccardIndex(task='binary')
