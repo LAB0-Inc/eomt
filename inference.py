@@ -10,6 +10,7 @@ import importlib
 import os
 import json
 from pycocotools import mask as mask_utils
+from tqdm import tqdm
 
 
 def infer_panoptic(img, target, mask_thresh, overlap_thresh):
@@ -355,7 +356,9 @@ coco_output = {
 annotation_id = 1
 
 # for img_idx in [0]:                                 # Single image.
-for img_idx in range(0, len(val_dataset), step):  # Full validation set.
+#for img_idx in range(0, len(val_dataset), step):  # Full validation set.
+for img_idx in tqdm(range(0, len(val_dataset), step)): # Full validation set, with progress bar.
+
     # Get the sample.
     img, target = val_dataset[img_idx]
     image_id = target.get('index') + 1  # COCO starts numbering samples from 1, not 0.
@@ -371,7 +374,7 @@ for img_idx in range(0, len(val_dataset), step):  # Full validation set.
         sem_pred, inst_pred, sem_target, inst_target, inst_scores = infer_panoptic(img, target, mask_thresh, overlap_thresh)
 
         # Compute and save inst. seg. image.
-        plot_panoptic_results(img, sem_pred, inst_pred, sem_target, inst_target, output_path)
+        # plot_panoptic_results(img, sem_pred, inst_pred, sem_target, inst_target, output_path)
 
         # COCO FORMAT.
         # Add image info
@@ -390,19 +393,26 @@ for img_idx in range(0, len(val_dataset), step):  # Full validation set.
         coco_output["annotations"].extend(anns)
         annotation_id += len(anns)
 
-        print(f"Processed {output_path}")
+        # print(f"Processed {output_path}")
         del img, target, sem_pred, inst_pred, sem_target, inst_target
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
     except Exception as E:
         print(f'WARNING: I had to skip image {output_path}, for some reason: {E}.')
+        try:
+            # Try clearing the memory even if an exception has happened.
+            del img, target, sem_pred, inst_pred, sem_target, inst_target
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+        except Exception as E:
+            pass
 
 
-    # Add categories to the COCO data.
-    coco_output["categories"] = [
-        {"id": 0, "name": "weird", "supercategory": "object"},
-        {"id": 1, "name": "box", "supercategory": "object"},
-    ]
+# Add categories to the COCO data.
+coco_output["categories"] = [
+    {"id": 0, "name": "weird", "supercategory": "object"},
+    {"id": 1, "name": "box", "supercategory": "object"},
+]
 
-    with open(os.path.join(output_dir, 'predictions.json'), 'w') as f:
-        json.dump(coco_output, f)
+with open(os.path.join(output_dir, 'predictions.json'), 'w') as f:
+    json.dump(coco_output, f)
