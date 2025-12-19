@@ -423,10 +423,15 @@ class LightningModule(lightning.LightningModule):
 
             block_postfix = self.block_postfix(i)
             # I use this to create the name of the checkpoint file.
-            self.log(
-                f"mAP",
-                results["map"],
-            )
+            # It is the mean Average Precision on all segments, computed with the output
+            # at the end of the model (== block postfix )
+            if log_prefix == 'val' and block_postfix == '':
+                self.log(
+                    f"val_ap_all",
+                    results["map"],
+                )
+                print(f'**********   val_ap_all was set to: {results["map"]:.3f}.   **********')
+
             self.log(
                 f"metrics/{log_prefix}_ap_all{block_postfix}",
                 results["map"],

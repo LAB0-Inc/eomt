@@ -4,4 +4,4 @@ python3 main.py fit \
   --trainer.devices 1 \
   --trainer.accumulate_grad_batches 16 \
   --data.batch_size 1 \
-  --data.path /workspace/data/Datasets/202507_fine_tuning_1/
+  --data.path /workspace/data/Datasets/fine_tuning_2025_12_19/

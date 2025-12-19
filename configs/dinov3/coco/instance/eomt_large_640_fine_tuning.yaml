@@ -1,5 +1,8 @@
+# This fine-tuning dataset has 2732 samples.
+# batch size = 4 -> #batches = 683.
+# accumulation = 4 -> #steps = 170
 trainer:
-  max_epochs: 97  # = #initial_training_epochs + #fine_tuning_training_epochs.
+  max_epochs: 10
   check_val_every_n_epoch: 1
   logger:
     class_path: lightning.pytorch.loggers.wandb.WandbLogger
@@ -13,8 +16,8 @@ model:
     attn_mask_annealing_enabled: False  #
     lr: 2e-5  # 2e-4 during the training.
     llrd_l2_enabled: False
-    # # Warm up steps for the backbone (5% of steps) and for the head (10% of steps).
-    # warmup_steps: [2250, 3375]
+    # Warm up steps for the backbone and for the head: one epoch = 170 steps.
+    warmup_steps: [170, 170]
     delta_weights: False
     ckpt_path: /workspace/data/EOMT/Checkpoints/Run5_Oregon/epoch=067-mAP=0.83.ckpt
     network:
@@ -26,4 +29,4 @@ model:
           init_args:
             backbone_name: facebook/dinov3-vitl16-pretrain-lvd1689m
 data:
-  class_path: datasets.coco_instance_our_202408.COCOInstance  # Our data, validation set of 2024 08
+  class_path: datasets.coco_instance_fine_tuning.COCOInstance  # Our fine-tuning data, v2025_12_19.

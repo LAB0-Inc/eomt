@@ -160,10 +160,10 @@ class LightningCLI(cli.LightningCLI):
 # Saves top-K checkpoints based on "val_loss" metric
 save_checkpoints_callback = ModelCheckpoint(
     save_top_k=3,
-    monitor="mAP",
+    monitor="val_ap_all",
     mode="max",
     dirpath="checkpoints/",
-    filename="{epoch:03d}-{mAP:.2f}",
+    filename="{epoch:03d}-{mAP:.3f}",
     )
 
 def cli_main():
