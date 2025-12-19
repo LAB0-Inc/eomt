@@ -17,11 +17,11 @@ from datetime import datetime
 
 
 def convert_labelme_to_coco(
-    annotations_zip_path='/workspace/data/Datasets/fine_tuning_2025_12_16/training_annotations_labelme_cleaned_up_stage_1.zip',
-    images_zip_path='/workspace/data/Datasets/fine_tuning_2025_12_16/training_images.zip',
+    annotations_zip_path='/workspace/data/Datasets/fine_tuning_2025_12_19/training_annotations_labelme.zip',
+    images_zip_path='/workspace/data/Datasets/fine_tuning_2025_12_19/training_images.zip',
     annotations_path_in_zip="./",
     images_path_in_zip="./",
-    output_json_path='/workspace/data/Datasets/fine_tuning_2025_12_16/coco_cleaned_up.json',
+    output_json_path='/workspace/data/Datasets/fine_tuning_2025_12_19/coco_cleaned_up.json',
     category_mapping=None,
 ):
     """

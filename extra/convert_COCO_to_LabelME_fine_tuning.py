@@ -98,7 +98,7 @@ def coco_to_labelme(
 
 if __name__ == "__main__":
     coco_to_labelme(
-        coco_json_path="/workspace/data/Datasets/fine_tuning_2025_12_16/training_annotations/annotations.json",
-        output_dir="/workspace/data/Datasets/fine_tuning_2025_12_16/training_annotations_labelme/",
+        coco_json_path="/workspace/data/Datasets/fine_tuning_2025_12_19/training_annotations/annotations.json",
+        output_dir="/workspace/data/Datasets/fine_tuning_2025_12_19/training_annotations_labelme/",
         image_root=None  # or e.g. "images/"
     )
