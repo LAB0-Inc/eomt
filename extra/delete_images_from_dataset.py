@@ -3,7 +3,7 @@ import os
 
 # SCD DATASET.
 # # Training set.
-# file_path = '/workspace/data/Datasets/SCD_low_res_clean/annotations_trainval2017/annotations/instances_train2017.json'
+# input_file_path = '/workspace/data/Datasets/SCD_low_res_clean/annotations_trainval2017/annotations/instances_train2017.json'
 # image_folder = '/workspace/data/Datasets/SCD_low_res_clean/train2017/'
 # filenames_to_remove = [
 #     'net (7945).png',  # Weird image with books, rather than boxes.
@@ -50,7 +50,7 @@ import os
 # ]
 
 # # Validation set.
-# file_path = '/workspace/data/Datasets/SCD_low_res_clean/annotations_trainval2017/annotations/instances_val2017.json'
+# input_file_path = '/workspace/data/Datasets/SCD_low_res_clean/annotations_trainval2017/annotations/instances_val2017.json'
 # image_folder = '/workspace/data/Datasets/SCD_low_res_clean/val2017/'
 # # List of file names to remove
 # filenames_to_remove = [
@@ -63,7 +63,8 @@ import os
 
 # Fine-tuning DATASET.
 # Training set.
-file_path = '/workspace/data/Datasets/fine_tuning_2025_12_16/training_annotations/coco_cleaned_up_stage_1.json'
+input_file_path = '/workspace/data/Datasets/fine_tuning_2025_12_16/coco_cleaned_up_stage_1.json'
+output_file_path = '/workspace/data/Datasets/fine_tuning_2025_12_16/coco_cleaned_up_removed_images.json'
 image_folder = '/workspace/data/Datasets/fine_tuning_2025_12_16/training_images/'
 # List of file names to remove
 filenames_to_remove = [
@@ -75,7 +76,7 @@ filenames_to_remove = [
     'cam_left_down_1751566344207034581.jpg',  # Boxes are very far, they are too small on the image to annotate them.
 ]
 
-with open(file_path) as f:
+with open(input_file_path) as f:
     data = json.load(f)
 
 # Count the number of images in the JSON file.
@@ -118,8 +119,9 @@ if apply_changes:
     print(f'Removed {removed_annotations_count} annotations. Remaining annotations: {len(data["annotations"])}')
 
     # Save the updated JSON file.
-    with open(file_path, 'w') as f:
-        json.dump(data, f)
+    with open(output_file_path, 'w') as f:
+        json.dump(data, f, indent=2)
     print('Updated JSON file saved.')
 else:
+    print('   --- WARNING ---   ')
     print('NO CHANGES APPLIED. Set apply_changes = True to modify the dataset.')
